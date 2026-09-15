@@ -1,0 +1,58 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Test and coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE / editor
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+.env.test
+.env.local
+.env.*.local
+
+# Flask
+instance/
+*.db
+
+# Logs de runtime (recriados automaticamente pela app)
+web/logs/
+
+# Artefatos locais de notebook / rascunho
+nb_cells.txt
+Analise/*_executed.ipynb
+**/__pycache__/
+

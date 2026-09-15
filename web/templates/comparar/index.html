@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Comparar laudos — Apoio ao Diagnóstico{% endblock %}
+{% block page_heading %}Comparar laudos{% endblock %}
+
+{% block content %}
+<div class="fiap-hero rounded-4 p-4 mb-4">
+  <h1 class="h3 text-white fw-bold mb-2">Comparar laudos do mesmo exame</h1>
+  <p class="text-white opacity-75 mb-0">
+    Mesmas medidas de biópsia, dois pareceres lado a lado:
+    <span class="fase1-badge-sm">Referência</span>
+    <span class="fase2-badge-sm">Otimizado</span>
+  </p>
+</div>
+
+{% if comparacao.tabela_modelos %}
+<div class="card fiap-card mb-4">
+  <div class="card-header fiap-card-header">Desempenho de referência (treino)</div>
+  <div class="card-body table-responsive">
+    <table class="table table-sm fiap-table">
+      <thead>
+        <tr>
+          <th>Modelo</th><th>Sensib. referência</th><th>Sensib. otimizado</th><th>F1 referência</th><th>F1 otimizado</th><th>Melhorou?</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in comparacao.tabela_modelos %}
+        <tr>
+          <td>{{ row.Modelo }}</td>
+          <td>{{ "%.2f%%"|format(row['Recall Anterior'] * 100) }}</td>
+          <td>{{ "%.2f%%"|format(row['Recall Otimizado'] * 100) }}</td>
+          <td>{{ "%.3f"|format(row['F1 Anterior']) }}</td>
+          <td>{{ "%.3f"|format(row['F1 Otimizado']) }}</td>
+          <td><span class="badge {{ 'bg-success' if row['Melhorou?'] == 'Sim' else 'bg-secondary' }}">{{ row['Melhorou?'] }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<form method="POST" action="/comparar/predict" id="prediction-form">
+  {% include "partials/diagnosis_form.html" %}
+  <div class="text-end mb-5">
+    <button type="submit" class="btn fiap-btn-primary px-5">Gerar comparação de laudos →</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+{% include "partials/form_scripts.html" %}
+{% endblock %}

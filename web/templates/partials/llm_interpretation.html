@@ -1,0 +1,53 @@
+{# Assistente clínico IA (chat lateral / drawer) #}
+<script type="application/json" id="llm-payload-json">{{ llm_payload | tojson }}</script>
+<script type="application/json" id="llm-feedback-tags">{{ llm_feedback_tags | tojson }}</script>
+
+<button type="button" id="llm-fab" class="llm-fab" aria-label="Abrir assistente clínico IA" aria-expanded="false">
+  <span class="llm-fab-icon">🤖</span>
+  <span class="llm-fab-text">Assistente IA</span>
+  <span class="llm-fab-dot d-none" id="llm-fab-dot" aria-hidden="true"></span>
+</button>
+
+<div class="llm-backdrop" id="llm-backdrop" hidden></div>
+
+<aside class="llm-drawer" id="llm-interpretation-card"
+       data-llm-mode="{{ llm_mode }}"
+       data-llm-enabled="{{ 'true' if llm_config.using_real_llm else 'false' }}"
+       aria-hidden="true" aria-label="Assistente clínico IA" role="dialog">
+
+  <header class="llm-drawer-header">
+    <div class="llm-drawer-titlewrap">
+      <span class="llm-drawer-title">🤖 Assistente Clínico IA</span>
+      <span class="badge llm-provider-badge" id="llm-provider-badge">carregando...</span>
+    </div>
+    <button type="button" class="llm-drawer-close" id="llm-close" aria-label="Fechar assistente">&times;</button>
+  </header>
+
+  <div class="llm-drawer-body">
+    <div id="llm-chat" class="llm-chat" aria-live="polite">
+      <div id="llm-loading" class="llm-loading text-center py-5">
+        <div class="spinner-border text-danger spinner-border-sm me-2" role="status"></div>
+        <span class="text-muted">Gerando explicação em linguagem natural...</span>
+      </div>
+    </div>
+    <div id="llm-error" class="alert alert-warning d-none mt-3 mb-0"></div>
+  </div>
+
+  <footer class="llm-drawer-footer">
+    <form id="llm-chat-form" class="llm-chat-form d-none">
+      <div class="input-group">
+        <input type="text" id="llm-chat-input" class="form-control" autocomplete="off"
+               placeholder="Pergunte sobre este caso..." maxlength="500">
+        <button class="btn fase2-btn-primary" type="submit" id="llm-chat-send" aria-label="Enviar">➤</button>
+      </div>
+    </form>
+
+    <p class="small text-muted mt-2 mb-0 llm-disclaimer">
+      ⚠️ Gerado por IA{% if llm_config.using_real_llm %} ({{ llm_config.model }}){% else %} — modo local (regras){% endif %}. Não substitui avaliação médica.
+      {% if not llm_config.using_real_llm %}
+      <br><span class="text-muted">Chat livre. Sem perguntas prontas. Em modo regras a resposta é local; o modelo generativo carrega em Ops.</span>
+      {% endif %}
+      <a href="/llm/avaliacao" class="text-muted"> · Avaliação →</a>
+    </p>
+  </footer>
+</aside>

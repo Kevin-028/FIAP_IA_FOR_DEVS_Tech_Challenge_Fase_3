@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Assistente clínico{% endblock %}
+{% block page_heading %}Assistente{% endblock %}
+{% block content %}
+{% if not engine.loaded %}
+<div class="alert alert-warning">
+  A LLM local está descarregada — o chat <strong>não responde</strong> sem ela.
+  <a href="/modelo">Carregar o Qwen + adapter</a> e volte aqui.
+</div>
+{% elif not adapter_ok %}
+<div class="alert alert-warning">Adapter QLoRA não encontrado em <code>models/adapter</code>.</div>
+{% endif %}
+
+<div class="clin-chat card fiap-card">
+  <div class="clin-chat-bar">
+    <label class="clin-chat-label" for="patientId">Prontuário</label>
+    <select id="patientId" class="form-select form-select-sm">
+      {% for p in patients %}
+      <option value="{{ p.id }}" {{ 'selected' if p.id == selected }}>{{ p.display_name }} — {{ p.diagnosis }}</option>
+      {% endfor %}
+    </select>
+    <a class="btn fiap-btn-outline btn-sm" href="/pacientes/{{ selected }}">Abrir registro</a>
+    <button type="button" id="newChat" class="btn fiap-btn-outline btn-sm">Nova conversa</button>
+  </div>
+
+  {% if pending %}
+  <div class="clin-context">
+    Exames pendentes neste prontuário:
+    {% for e in pending %}{{ e.name }}{% if not loop.last %}, {% endif %}{% endfor %}.
+  </div>
+  {% endif %}
+
+  <div id="transcript" class="clin-chat-log" aria-live="polite">
+    <div id="empty" class="clin-chat-empty">
+      <p class="mb-0">Dúvida clínica em inglês, com o prontuário selecionado. Toda resposta pede para <strong>consultar o médico</strong>. Pedido de prescrição é recusado.</p>
+    </div>
+  </div>
+
+  <form id="composer" class="clin-chat-composer">
+    <textarea id="question" class="form-control" rows="2" maxlength="2000" placeholder="Clinical question in English…" {% if not engine.loaded %}disabled{% endif %}></textarea>
+    <button id="sendBtn" class="btn fiap-btn-primary" type="submit" {% if not engine.loaded %}disabled{% endif %}>Enviar</button>
+  </form>
+</div>
+<p class="small text-muted mt-2 mb-0">Apoio educacional. Não diagnostica e não prescreve.</p>
+<script>
+const transcript = document.getElementById("transcript");
+const empty = document.getElementById("empty");
+const input = document.getElementById("question");
+const sendBtn = document.getElementById("sendBtn");
+const patientId = document.getElementById("patientId");
+const llmLoaded = {{ "true" if engine.loaded else "false" }};
+const history = [];
+
+function escapeHtml(text) {
+  return (text || "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[ch]));
+}
+
+function scrollDown() {
+  transcript.scrollTop = transcript.scrollHeight;
+}
+
+function addBubble(role, text, extra) {
+  empty.classList.add("d-none");
+  const wrap = document.createElement("div");
+  wrap.className = "clin-msg clin-msg-" + role;
+  const bubble = document.createElement("div");
+  bubble.className = "clin-bubble";
+  bubble.textContent = text;
+  wrap.appendChild(bubble);
+  if (extra) {
+    const meta = document.createElement("div");
+    meta.className = "clin-meta";
+    meta.innerHTML = extra;
+    wrap.appendChild(meta);
+  }
+  transcript.appendChild(wrap);
+  scrollDown();
+  return wrap;
+}
+
+function typing() {
+  const wrap = document.createElement("div");
+  wrap.className = "clin-msg clin-msg-assistant";
+  wrap.id = "typing";
+  wrap.innerHTML = '<div class="clin-bubble clin-typing"><span></span><span></span><span></span></div>';
+  transcript.appendChild(wrap);
+  scrollDown();
+}
+
+function clearChat() {
+  history.length = 0;
+  transcript.querySelectorAll(".clin-msg").forEach((node) => node.remove());
+  empty.classList.remove("d-none");
+  input.value = "";
+  if (llmLoaded) input.focus();
+}
+
+async function send() {
+  const question = input.value.trim();
+  if (!question || sendBtn.disabled) return;
+  if (!llmLoaded) {
+    addBubble("assistant", "Carregue a LLM em /modelo antes de perguntar.");
+    return;
+  }
+  const prior = history.map((turn) => ({ role: turn.role, content: turn.content }));
+  addBubble("user", question);
+  history.push({ role: "user", content: question });
+  input.value = "";
+  input.style.height = "";
+  sendBtn.disabled = true;
+  typing();
+  try {
+    const res = await fetch("/api/assistente/perguntar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        patient_id: patientId.value,
+        question,
+        history: prior
+      })
+    });
+    const data = await res.json();
+    document.getElementById("typing")?.remove();
+    if (!res.ok) throw new Error(data.error || "Falha ao consultar o assistente");
+    const answer = data.final_answer || "";
+    const bits = [];
+    const sources = (data.sources || []).map((s) => `PMID ${s.pmid} · ${s.protocol_id}`).filter(Boolean);
+    if (sources.length) bits.push("Fontes: " + escapeHtml(sources.join(" · ")));
+    if ((data.safety_flags || []).includes("prescription_blocked")) {
+      bits.push("Prescrição recusada. Consulte o médico.");
+    }
+    addBubble("assistant", answer, bits.join("<br>"));
+    history.push({ role: "assistant", content: answer });
+  } catch (err) {
+    document.getElementById("typing")?.remove();
+    addBubble("assistant", err.message || "Não foi possível responder.");
+    history.pop();
+  } finally {
+    sendBtn.disabled = !llmLoaded;
+    if (llmLoaded) input.focus();
+  }
+}
+
+document.getElementById("composer").addEventListener("submit", (event) => {
+  event.preventDefault();
+  send();
+});
+input.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    send();
+  }
+});
+document.getElementById("newChat").addEventListener("click", clearChat);
+patientId.addEventListener("change", () => {
+  window.location = "/assistente?patient_id=" + encodeURIComponent(patientId.value);
+});
+if (llmLoaded) input.focus();
+</script>
+{% endblock %}

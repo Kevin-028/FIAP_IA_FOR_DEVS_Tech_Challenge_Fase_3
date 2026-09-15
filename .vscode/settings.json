@@ -1,0 +1,30 @@
+{
+  // Caminho absoluto: o seletor do notebook ignora ${workspaceFolder} e o .venv do .gitignore
+  "python.defaultInterpreterPath": "C:/workspace/FIAP/IA_DEVs/Tech_Challenge/Fase_3/.venv/Scripts/python.exe",
+  "python.terminal.activateEnvironment": true,
+
+  // Resolução de imports (web/ usa models.*, llm.*, controllers.*; raiz tem hospital.* e assistant.*)
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/web",
+    "${workspaceFolder}"
+  ],
+  "terminal.integrated.env.windows": {
+    "PYTHONPATH": "${workspaceFolder};${workspaceFolder}/web"
+  },
+
+  // --- Pytest (painel Testing: ícone de tubo de ensaio na barra lateral) ---
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.cwd": "${workspaceFolder}",
+  "python.testing.pytestArgs": [
+    "tests",
+    "-v"
+  ],
+  "python.testing.autoTestDiscoverOnSaveEnabled": true,
+
+  // Arquivos ocultos no explorer (opcional, reduz ruído)
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true
+  }
+}

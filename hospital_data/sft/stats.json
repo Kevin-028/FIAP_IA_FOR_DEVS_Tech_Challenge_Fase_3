@@ -1,0 +1,18 @@
+{
+  "source": "huggingface",
+  "train_examples": 9227,
+  "hospital_examples": 27,
+  "template": "qwen",
+  "test_labeled": 500,
+  "train_label_counts": {
+    "yes": 3021,
+    "no": 2919,
+    "maybe": 60
+  },
+  "artificial_before_balance_yes_share": null,
+  "paths": {
+    "train": "c:\\workspace\\FIAP\\IA_DEVs\\Tech_Challenge\\Fase_3\\hospital_data\\sft\\train.jsonl",
+    "sample": "c:\\workspace\\FIAP\\IA_DEVs\\Tech_Challenge\\Fase_3\\hospital_data\\sft\\train_sample_200.jsonl",
+    "test": "c:\\workspace\\FIAP\\IA_DEVs\\Tech_Challenge\\Fase_3\\hospital_data\\sft\\test_labeled.json"
+  }
+}

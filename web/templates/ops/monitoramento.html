@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Monitoramento — Apoio ao Diagnóstico{% endblock %}
+{% block page_heading %}Monitoramento{% endblock %}
+
+{% block content %}
+<div class="fiap-hero rounded-4 p-4 mb-4">
+  <h1 class="h3 text-white fw-bold">Monitoramento do sistema</h1>
+  <p class="text-white opacity-75 mb-0">Desempenho e uso em tempo real · registros em web/logs/app.log</p>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card fiap-stat-card text-center"><div class="card-body py-3">
+      <div class="fiap-stat-value">{{ metrics.request_count }}</div>
+      <div class="fiap-stat-label">Requisições</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card fiap-stat-card text-center"><div class="card-body py-3">
+      <div class="fiap-stat-value">{{ metrics.prediction_count }}</div>
+      <div class="fiap-stat-label">Predições</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card fiap-stat-card text-center"><div class="card-body py-3">
+      <div class="fiap-stat-value">{{ metrics.avg_latency_ms }}ms</div>
+      <div class="fiap-stat-label">Latência média</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card fiap-stat-card text-center"><div class="card-body py-3">
+      <div class="fiap-stat-value">{{ metrics.workers }}/{{ metrics.max_workers }}</div>
+      <div class="fiap-stat-label">Workers (auto-scale)</div>
+    </div></div>
+  </div>
+</div>
+
+<div class="card fiap-card mb-4">
+  <div class="card-header fiap-card-header">Pareceres por fluxo</div>
+  <div class="card-body">
+    <ul class="mb-0">
+      <li>Exame de referência (baseline): <strong>{{ metrics.predictions_by_fase.fase1 }}</strong></li>
+      <li>Novo exame (otimizado): <strong>{{ metrics.predictions_by_fase.fase2 }}</strong></li>
+      <li>Comparação de laudos: <strong>{{ metrics.predictions_by_fase.comparar }}</strong></li>
+    </ul>
+  </div>
+</div>
+
+<div class="card fiap-card mb-4">
+  <div class="card-header fiap-card-header">Modelo local (Hugging Face)</div>
+  <div class="card-body">
+    <p class="mb-1">Status: <strong id="engineLoaded">{{ 'carregado' if engine.loaded else 'descarregado' }}</strong></p>
+    <p class="small text-muted mb-3">Sem timeout e sem Ollama. O checkpoint fica na memória até você descarregar ou encerrar o app.</p>
+    <p class="small"><code id="enginePath">{{ engine.path }}</code></p>
+    <button type="button" class="btn fiap-btn-primary btn-sm" id="btnLoad">Carregar</button>
+    <button type="button" class="btn fiap-btn-outline btn-sm" id="btnUnload">Descarregar</button>
+    <p class="small text-danger mt-2 mb-0" id="engineError">{{ engine.error or '' }}</p>
+  </div>
+</div>
+
+<div class="card fiap-card">
+  <div class="card-header fiap-card-header">APIs de observabilidade</div>
+  <div class="card-body">
+    <p><code>GET /api/health</code> — health check</p>
+    <p class="mb-0"><code>GET /api/metrics</code> — métricas JSON (Prometheus-compatible)</p>
+  </div>
+</div>
+
+<script>
+  async function engineAction(url) {
+    const res = await fetch(url, { method: "POST" });
+    const data = await res.json();
+    document.getElementById("engineLoaded").textContent = data.loaded ? "carregado" : "descarregado";
+    document.getElementById("engineError").textContent = data.error || "";
+  }
+  document.getElementById("btnLoad").onclick = () => engineAction("/api/llm/engine/load");
+  document.getElementById("btnUnload").onclick = () => engineAction("/api/llm/engine/unload");
+</script>
+{% endblock %}

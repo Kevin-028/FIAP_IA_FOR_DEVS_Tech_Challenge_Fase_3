@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Auditoria — Apoio ao Diagnóstico{% endblock %}
+{% block page_heading %}Auditoria do assistente{% endblock %}
+{% block body_class %}modulo-llm{% endblock %}
+
+{% block content %}
+<div class="fiap-hero rounded-4 p-4 mb-4">
+  <span class="badge bg-info mb-2">CURADORIA</span>
+  <h1 class="h3 text-white fw-bold mb-1">Auditoria das interpretações</h1>
+  <p class="text-white opacity-75 mb-0">
+    Revisite respostas avaliadas (👍/👎) com contexto do caso, pergunta, mensagem gerada
+    e motivo do feedback. Provedor atual: <strong>{{ provider_info.model }}</strong>
+  </p>
+</div>
+
+<!-- Resumo -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card fiap-stat-card text-center"><div class="card-body py-3">
+      <div class="fiap-stat-value">{{ summary.total }}</div>
+      <div class="fiap-stat-label">Avaliações</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card fiap-stat-card text-center"><div class="card-body py-3">
+      <div class="fiap-stat-value text-success">👍 {{ summary.likes }}</div>
+      <div class="fiap-stat-label">Úteis</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card fiap-stat-card text-center"><div class="card-body py-3">
+      <div class="fiap-stat-value text-danger">👎 {{ summary.dislikes }}</div>
+      <div class="fiap-stat-label">Não úteis</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card fiap-stat-card text-center"><div class="card-body py-3">
+      <div class="fiap-stat-value">{{ summary.satisfaction }}%</div>
+      <div class="fiap-stat-label">Satisfação</div>
+    </div></div>
+  </div>
+</div>
+
+<!-- Problemas por categoria -->
+{% if summary.tag_counts %}
+<div class="card fiap-card mb-4">
+  <div class="card-header fiap-card-header">Problemas por categoria</div>
+  <div class="card-body d-flex flex-wrap gap-2">
+    {% for tag, count in summary.tag_counts.items() %}
+    <span class="badge bg-danger-subtle text-danger border border-danger-subtle p-2">
+      {{ tag }} <span class="badge bg-danger ms-1">{{ count }}</span>
+    </span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Filtros -->
+<div class="d-flex flex-wrap gap-2 mb-3" id="audit-filters">
+  <button class="btn btn-sm fiap-filter-btn active" data-filter="all">Todos ({{ records|length }})</button>
+  <button class="btn btn-sm fiap-filter-btn" data-filter="like">👍 Úteis ({{ summary.likes }})</button>
+  <button class="btn btn-sm fiap-filter-btn" data-filter="dislike">👎 Não úteis ({{ summary.dislikes }})</button>
+</div>
+
+<!-- Lista de mensagens -->
+<div id="audit-list">
+  {% for r in records %}
+  <div class="card fiap-card mb-3 audit-card audit-{{ r.rating }}" data-rating="{{ r.rating }}">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          {% if r.rating == 'like' %}
+          <span class="badge bg-success">👍 Útil</span>
+          {% else %}
+          <span class="badge bg-danger">👎 Não útil</span>
+          {% endif %}
+          <span class="badge fiap-badge-context">
+            {{ r.mode|upper }}{% if r.diagnostico %} · {{ r.diagnostico }}{% endif %}{% if r.prob is not none %} · {{ r.prob }}%{% endif %}
+          </span>
+        </div>
+        <span class="small text-muted">{{ r.ts[:16]|replace('T', ' ') }} · {{ r.provider }}</span>
+      </div>
+
+      {% if r.question %}
+      <div class="audit-field">
+        <span class="audit-label">Pergunta / origem</span>
+        <div class="audit-question">{{ r.question }}</div>
+      </div>
+      {% endif %}
+
+      <div class="audit-field">
+        <span class="audit-label">Mensagem avaliada</span>
+        <div class="audit-answer">{{ r.answer or '—' }}</div>
+      </div>
+
+      {% if r.rating == 'dislike' %}
+      <div class="audit-field">
+        {% if r.tags %}
+        <div class="mb-1">
+          {% for t in r.tags %}<span class="badge fiap-soft-badge me-1 mb-1">{{ t }}</span>{% endfor %}
+        </div>
+        {% endif %}
+        {% if r.reason %}
+        <span class="audit-label">Motivo</span>
+        <div class="audit-reason">{{ r.reason }}</div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% set ctx = r.context or {} %}
+      {% set res = ctx.result or {} %}
+      {% if res %}
+      <details class="audit-context mt-2">
+        <summary class="audit-context-summary">🔬 Contexto do caso (para reproduzir)</summary>
+        <div class="audit-context-body">
+          <div class="audit-ctx-grid">
+            {% if res.nome_modelo %}<div><span class="audit-label">Modelo</span><div>{{ res.nome_modelo }}</div></div>{% endif %}
+            {% if res.diagnostico %}<div><span class="audit-label">Diagnóstico</span><div>{{ res.diagnostico }}</div></div>{% endif %}
+            {% if res.probabilidade is not none %}<div><span class="audit-label">Probabilidade</span><div>{{ res.probabilidade }}%</div></div>{% endif %}
+            {% if res.nivel %}<div><span class="audit-label">Nível de risco</span><div>{{ res.nivel }}</div></div>{% endif %}
+            {% if res.limiar is not none %}<div><span class="audit-label">Limiar</span><div>{{ res.limiar }}%</div></div>{% endif %}
+          </div>
+          {% if res.metricas %}
+          <div class="mt-2">
+            <span class="audit-label">Métricas do modelo</span>
+            <div class="d-flex flex-wrap gap-2 mt-1">
+              {% for k, v in res.metricas.items() %}<span class="badge fiap-soft-badge">{{ k }}: {{ v }}</span>{% endfor %}
+            </div>
+          </div>
+          {% endif %}
+          {% if ctx.feature_highlights %}
+          <div class="mt-2">
+            <span class="audit-label">Achados morfológicos (fora da faixa)</span>
+            <div class="table-responsive mt-1">
+              <table class="table table-sm audit-ctx-table mb-0">
+                <thead><tr><th>Característica</th><th>Valor</th><th>Faixa referência</th><th>Status</th></tr></thead>
+                <tbody>
+                  {% for f in ctx.feature_highlights %}
+                  <tr>
+                    <td>{{ f.label or f.name }}</td>
+                    <td>{{ f.value }}</td>
+                    <td>{% if f.min is not none %}{{ f.min }} – {{ f.max }}{% else %}—{% endif %}</td>
+                    <td>{{ f.status or '—' }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {% endif %}
+          <script type="application/json" class="audit-ctx-json">{{ ctx|tojson }}</script>
+          <button type="button" class="btn btn-sm btn-outline-primary mt-2 audit-repro-btn">🔁 Reproduzir mensagem</button>
+          <div class="audit-repro-out mt-2 d-none"></div>
+        </div>
+      </details>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="card fiap-card">
+    <div class="card-body text-center text-muted py-5">
+      Nenhuma avaliação registrada ainda. Assim que os médicos avaliarem as respostas
+      do assistente (👍/👎) na Fase 2, elas aparecerão aqui para curadoria.
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const filterBtns = document.querySelectorAll("#audit-filters .fiap-filter-btn");
+  const cards = document.querySelectorAll("#audit-list .audit-card");
+  filterBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      filterBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      const f = btn.dataset.filter;
+      cards.forEach((c) => {
+        c.style.display = f === "all" || c.dataset.rating === f ? "" : "none";
+      });
+    });
+  });
+
+  // Reproduzir a mensagem a partir do contexto salvo do caso.
+  document.querySelectorAll(".audit-repro-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const wrap = btn.closest(".audit-context-body");
+      const out = wrap.querySelector(".audit-repro-out");
+      const json = wrap.querySelector(".audit-ctx-json");
+      let ctx;
+      try {
+        ctx = JSON.parse(json.textContent);
+      } catch (e) {
+        return;
+      }
+      btn.disabled = true;
+      const original = btn.textContent;
+      btn.textContent = "⏳ Gerando...";
+      out.classList.remove("d-none");
+      out.innerHTML = '<div class="text-muted small">Consultando o assistente...</div>';
+      try {
+        const resp = await fetch("/api/llm/interpret", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(ctx),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Falha ao gerar");
+        const prov = data.provider ? ` · ${data.provider}` : "";
+        out.innerHTML =
+          '<div class="audit-label">Mensagem reproduzida agora' + prov + "</div>" +
+          '<div class="audit-answer audit-repro-text"></div>';
+        out.querySelector(".audit-repro-text").textContent = data.text || data.interpretation || "—";
+      } catch (e) {
+        out.innerHTML = '<div class="text-danger small">Não foi possível reproduzir: ' + e.message + "</div>";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    });
+  });
+</script>
+{% endblock %}

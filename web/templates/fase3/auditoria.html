@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Auditoria — Assistente clínico{% endblock %}
+{% block page_heading %}Auditoria{% endblock %}
+
+{% block content %}
+<div class="card fiap-card">
+  <div class="card-header fiap-card-header">Turnos do grafo (JSONL)</div>
+  <div class="card-body">
+    <p class="small text-muted">Fonte, alerta e decisão humana.</p>
+    {% for turn in turns %}
+    <div class="border rounded p-3 mb-3">
+      <div class="small text-muted">{{ turn.ts }} · {{ turn.patient_id or "—" }} · {{ turn.thread_id or "—" }}</div>
+      <p class="small mb-1" style="white-space:pre-wrap">{{ turn.final_answer or "—" }}</p>
+      {% if turn.sources %}
+      <div class="small">Fontes:
+        {% for s in turn.sources %}
+        PMID {{ s.pmid }} ({{ s.protocol_id }}){% if not loop.last %} · {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if turn.interrupted %}
+      <div class="small">Aguardando médico.</div>
+      {% endif %}
+      {% if turn.decision %}
+      <div class="small">Decisão médica: {{ turn.decision }}</div>
+      {% endif %}
+    </div>
+    {% else %}
+    <p class="mb-0 text-muted">Nenhum turno ainda. Use o assistente para gerar a trilha.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

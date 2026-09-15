@@ -1,0 +1,85 @@
+<aside class="fiap-sidebar" id="fiapSidebar" aria-label="Menu do assistente clínico">
+  <div class="fiap-sidebar-brand">
+    <a href="/" class="fiap-sidebar-brand-link" title="Painel">
+      <span class="fiap-logo-badge">FIAP</span>
+      <span class="fiap-sidebar-brand-text">
+        <strong>Assistente clínico</strong>
+        <small>Hospital · Fase 3</small>
+      </span>
+    </a>
+    <button type="button" class="fiap-sidebar-collapse" id="fiapSidebarCollapse"
+            title="Minimizar menu" aria-label="Minimizar menu" aria-pressed="false">
+      «
+    </button>
+  </div>
+
+  <nav class="fiap-sidebar-nav">
+    <div class="fiap-nav-group">
+      <div class="fiap-nav-group-title">Plantão</div>
+      <a href="/" class="fiap-side-link {{ 'active' if nav_home }}" title="Painel">
+        <span class="fiap-side-ico" aria-hidden="true">⌂</span>
+        <span class="fiap-side-link-body">
+          <strong>Painel</strong>
+          <small>Fila, modelo e fluxo</small>
+        </span>
+      </a>
+    </div>
+
+    <div class="fiap-nav-group">
+      <div class="fiap-nav-group-title">Atendimento</div>
+      <a href="/pacientes" class="fiap-side-link {{ 'active' if nav_pacientes }}" title="Pacientes">
+        <span class="fiap-side-ico" aria-hidden="true">▣</span>
+        <span class="fiap-side-link-body">
+          <strong>Pacientes</strong>
+          <small>Prontuário anonimizado</small>
+        </span>
+      </a>
+      <a href="/assistente" class="fiap-side-link {{ 'active' if nav_assistente }}" title="Assistente">
+        <span class="fiap-side-ico" aria-hidden="true">✦</span>
+        <span class="fiap-side-link-body">
+          <strong>Assistente</strong>
+          <small>Prontuário + protocolo + LLM</small>
+        </span>
+      </a>
+      <a href="/alertas" class="fiap-side-link {{ 'active' if nav_alertas }}" title="Alertas">
+        <span class="fiap-side-ico" aria-hidden="true">!</span>
+        <span class="fiap-side-link-body">
+          <strong>Alertas</strong>
+          <small>{{ open_alerts or 0 }} em aberto</small>
+        </span>
+      </a>
+    </div>
+
+    <div class="fiap-nav-group">
+      <div class="fiap-nav-group-title">Modelo e trilha</div>
+      <a href="/modelo" class="fiap-side-link {{ 'active' if nav_modelo }}" title="Modelo">
+        <span class="fiap-side-ico" aria-hidden="true">◔</span>
+        <span class="fiap-side-link-body">
+          <strong>Modelo local</strong>
+          <small>QLoRA · carregar / descarregar</small>
+        </span>
+      </a>
+      <a href="/auditoria" class="fiap-side-link {{ 'active' if nav_auditoria }}" title="Auditoria">
+        <span class="fiap-side-ico" aria-hidden="true">◎</span>
+        <span class="fiap-side-link-body">
+          <strong>Auditoria</strong>
+          <small>PMID, alerta e decisão</small>
+        </span>
+      </a>
+    </div>
+
+    <div class="fiap-nav-group fiap-nav-group-bottom">
+      <a href="/configuracoes/" class="fiap-side-link {{ 'active' if nav_settings }}" title="Configurações">
+        <span class="fiap-side-ico" aria-hidden="true">⚙</span>
+        <span class="fiap-side-link-body">
+          <strong>Configurações</strong>
+          <small>Tema da interface</small>
+        </span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="fiap-sidebar-footnote">
+    Apoio educacional.<br>Consulte sempre o médico.
+  </div>
+</aside>

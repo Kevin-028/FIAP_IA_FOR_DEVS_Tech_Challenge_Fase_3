@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% block title %}Coletar Dados — Gestos | FIAP{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-10">
+
+    <div class="fiap-section-header mb-4">
+      <h1 class="fiap-page-title">📸 Coletar Dados de Treino</h1>
+      <p class="fiap-page-subtitle">
+        Selecione um dígito, posicione sua mão e clique em <strong>Gravar</strong>.
+        O sistema captura {{ 200 }} amostras automaticamente.
+      </p>
+    </div>
+
+    <!-- Diagnóstico (visível enquanto carrega) -->
+    <div id="diagBox" class="alert alert-info py-2 small mb-3">
+      <strong>Status:</strong> <span id="diagStatus">Carregando bibliotecas...</span>
+    </div>
+
+    <div class="row g-4">
+      <!-- Câmera -->
+      <div class="col-12 col-md-7">
+        <div class="fiap-card">
+          <div class="fiap-card-header">📷 Câmera</div>
+          <div class="fiap-card-body text-center">
+            <div class="visao-cam-wrapper">
+              <video id="inputVideo" class="visao-video" autoplay playsinline style="display:none"></video>
+              <canvas id="outputCanvas" class="visao-canvas" style="display:none"></canvas>
+              <div id="camPlaceholder" class="visao-placeholder">
+                <span style="font-size:3rem">📷</span>
+                <p class="mt-2 mb-0 text-muted">Clique em "Ligar Câmera"</p>
+              </div>
+            </div>
+
+            <div class="mt-3 d-flex justify-content-center gap-2 flex-wrap">
+              <button id="btnCam" class="btn fiap-btn-primary">▶ Ligar Câmera</button>
+              <button id="btnRecord" class="btn btn-success d-none" disabled>⏺ Gravar</button>
+              <button id="btnStop"   class="btn btn-danger d-none">⏹ Parar</button>
+            </div>
+
+            <!-- Progresso de gravação -->
+            <div id="recProgress" class="mt-3" style="display:none">
+              <div class="d-flex justify-content-between small mb-1">
+                <span id="recLabel">Gravando dígito <strong id="recDigit">?</strong></span>
+                <span id="recCount">0 / 200</span>
+              </div>
+              <div class="progress" style="height:14px;border-radius:8px">
+                <div id="recBar" class="progress-bar bg-success" style="width:0%;border-radius:8px"
+                     role="progressbar"></div>
+              </div>
+              <div id="recCountdown" class="mt-2 text-warning fw-bold" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Painel de dígitos -->
+      <div class="col-12 col-md-5">
+        <div class="fiap-card">
+          <div class="fiap-card-header">🔢 Selecione o Dígito</div>
+          <div class="fiap-card-body">
+            <div class="d-grid gap-2" style="grid-template-columns:repeat(5,1fr);display:grid">
+              {% for d in range(1, 6) %}
+              <button class="btn btn-outline-secondary digit-btn" data-digit="{{ d }}" id="btn-digit-{{ d }}">
+                <div class="fw-bold fs-4">{{ d }}</div>
+                <div class="small" id="count-{{ d }}">
+                  {{ status.samples_per_digit.get(d|string, 0) }}
+                </div>
+              </button>
+              {% endfor %}
+            </div>
+            <p class="small text-muted mt-3 mb-0">
+              Clique em um número para selecioná-lo, depois pressione <strong>Gravar</strong>.
+            </p>
+          </div>
+        </div>
+
+        <!-- Totais -->
+        <div class="fiap-card mt-3">
+          <div class="fiap-card-header">📊 Amostras Coletadas</div>
+          <div class="fiap-card-body">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="text-muted small">Total</span>
+              <span id="totalCount" class="fw-bold">{{ status.total_samples }}</span>
+            </div>
+            <div class="progress" style="height:8px;border-radius:8px">
+              <div id="totalBar" class="progress-bar"
+                   style="width:{{ [status.total_samples / 2000 * 100, 100]|min }}%;background:var(--fiap-red);border-radius:8px"
+                   role="progressbar"></div>
+            </div>
+            <p class="small text-muted mt-1 mb-0">{{ status.total_samples }} / 2000 (200 por dígito)</p>
+
+            <div class="mt-3 d-flex gap-2">
+              <a href="/visao/treinar" class="btn fiap-btn-primary btn-sm flex-fill">🏋️ Ir para Treino</a>
+              <a href="/visao" class="btn btn-outline-secondary btn-sm flex-fill">✋ Predizer</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /row -->
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='mediapipe/camera_utils.js') }}"></script>
+<script src="{{ url_for('static', filename='mediapipe/drawing_utils.js') }}"></script>
+<script src="{{ url_for('static', filename='mediapipe/hands.js') }}"></script>
+
+<script>
+// Diagnóstico — mostra o que carregou
+const diagStatus = document.getElementById('diagStatus');
+const diagBox    = document.getElementById('diagBox');
+
+function setDiag(msg, type='info') {
+  diagStatus.textContent = msg;
+  diagBox.className = 'alert alert-' + type + ' py-2 small mb-3';
+}
+
+window.addEventListener('load', () => {
+  const checks = [];
+  checks.push('Hands: ' + (typeof Hands !== 'undefined' ? '✅' : '❌'));
+  checks.push('Camera: ' + (typeof Camera !== 'undefined' ? '✅' : '❌'));
+  checks.push('drawConnectors: ' + (typeof drawConnectors !== 'undefined' ? '✅' : '❌'));
+  if (typeof Hands === 'undefined' || typeof Camera === 'undefined') {
+    setDiag('❌ MediaPipe não carregou: ' + checks.join(' | '), 'danger');
+  } else {
+    setDiag('✅ MediaPipe pronto. Clique em "Ligar Câmera". ' + checks.join(' | '), 'success');
+  }
+});
+</script>
+
+<script>
+const SAMPLES_TARGET  = 200;
+const COUNTDOWN_SECS  = 3;
+
+const video       = document.getElementById('inputVideo');
+const canvas      = document.getElementById('outputCanvas');
+const placeholder = document.getElementById('camPlaceholder');
+const ctx         = canvas.getContext('2d');
+const btnCam      = document.getElementById('btnCam');
+const btnRecord   = document.getElementById('btnRecord');
+const btnStopRec  = document.getElementById('btnStop');
+const recProgress = document.getElementById('recProgress');
+const recDigitEl  = document.getElementById('recDigit');
+const recCountEl  = document.getElementById('recCount');
+const recBar      = document.getElementById('recBar');
+const recCountdown = document.getElementById('recCountdown');
+const totalCount  = document.getElementById('totalCount');
+const totalBar    = document.getElementById('totalBar');
+
+const recLabel = document.getElementById('recLabel');
+
+let camera       = null;
+let selectedDigit = null;
+let recording    = false;
+let countdownEnd = null;
+let sampleCount  = 0;
+let saving       = false;   // evita requests simultâneos
+let lastSaveTime = 0;       // throttle: máx 1 save a cada 200ms
+const SAVE_INTERVAL_MS = 200;
+
+// ── Seleção de dígito ──────────────────────────────────────────────────────
+document.querySelectorAll('.digit-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (recording) return;
+    document.querySelectorAll('.digit-btn').forEach(b => {
+      b.classList.remove('active', 'btn-danger');
+      b.classList.add('btn-outline-secondary');
+    });
+    btn.classList.add('active', 'btn-danger');
+    btn.classList.remove('btn-outline-secondary');
+    selectedDigit = parseInt(btn.dataset.digit);
+    if (camera) btnRecord.disabled = false;
+  });
+});
+
+function extractLandmarks(lms) {
+  const ox = lms[0].x, oy = lms[0].y, oz = lms[0].z;
+  const flat = [];
+  for (const lm of lms) flat.push(lm.x - ox, lm.y - oy, lm.z - oz);
+  return flat;
+}
+
+function refreshStatus() {
+  fetch('/visao/api/status')
+    .then(r => r.json())
+    .then(s => {
+      totalCount.textContent = s.total_samples;
+      totalBar.style.width = Math.min(s.total_samples / 2000 * 100, 100) + '%';
+      Object.entries(s.samples_per_digit).forEach(([d, c]) => {
+        const el = document.getElementById(`count-${d}`);
+        if (el) el.textContent = c;
+      });
+    });
+}
+
+// ── MediaPipe ─────────────────────────────────────────────────────────────
+const hands = new Hands({
+  locateFile: f => `/static/mediapipe/${f}`
+});
+hands.setOptions({
+  maxNumHands: 2,
+  modelComplexity: 0,
+  minDetectionConfidence: 0.7,
+  minTrackingConfidence: 0.5
+});
+
+hands.onResults(results => {
+  if (!window._handsFirstResult) {
+    window._handsFirstResult = true;
+    setDiag('✅ MediaPipe processando frames!', 'success');
+  }
+  canvas.width  = video.videoWidth  || 640;
+  canvas.height = video.videoHeight || 480;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+    if (recording) {
+      ctx.fillStyle = 'rgba(255,193,7,0.15)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    return;
+  }
+
+  if (!window._handDetected) {
+    window._handDetected = true;
+    setDiag('✋ Mão detectada! Pode iniciar gravação.', 'success');
+  }
+
+  const hl = results.multiHandLandmarks[0];
+  drawConnectors(ctx, hl, HAND_CONNECTIONS, { color: '#EF3340', lineWidth: 2 });
+  drawLandmarks(ctx, hl, { color: '#fff', lineWidth: 1, radius: 4 });
+
+  if (!recording || selectedDigit === null) return;
+
+  const now = Date.now();
+
+  // Contagem regressiva
+  if (countdownEnd === null) countdownEnd = now + COUNTDOWN_SECS * 1000;
+  const remaining = (countdownEnd - now) / 1000;
+  if (remaining > 0) {
+    recCountdown.style.display = '';
+    recCountdown.textContent = `Preparando... ${Math.ceil(remaining)}s`;
+    return;
+  }
+  recCountdown.style.display = 'none';
+
+  // Throttle + flag de pending (evita flood de requests)
+  if (saving || sampleCount >= SAMPLES_TARGET) return;
+  if (now - lastSaveTime < SAVE_INTERVAL_MS) return;
+
+  saving = true;
+  lastSaveTime = now;
+  const landmarks = extractLandmarks(hl);
+  const digit = selectedDigit;
+
+  fetch('/visao/api/save_sample', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ digit, landmarks })
+  })
+  .then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  })
+  .then(data => {
+    sampleCount++;
+    recCountEl.textContent = `${sampleCount} / ${SAMPLES_TARGET}`;
+    recBar.style.width = (sampleCount / SAMPLES_TARGET * 100) + '%';
+
+    const countEl = document.getElementById(`count-${digit}`);
+    if (countEl) countEl.textContent = data.count;
+
+    // Atualiza painel total a cada 10 amostras
+    if (sampleCount % 10 === 0) refreshStatus();
+
+    if (sampleCount >= SAMPLES_TARGET) {
+      recording = false;
+      recBar.style.background = '#198754';
+      recLabel.innerHTML = `✅ Dígito <strong>${digit}</strong> concluído!`;
+      btnRecord.classList.remove('d-none');
+      btnStopRec.classList.add('d-none');
+      refreshStatus();
+    }
+  })
+  .catch(err => console.error('Erro ao salvar amostra:', err))
+  .finally(() => { saving = false; });
+});
+
+// ── Câmera ─────────────────────────────────────────────────────────────────
+btnCam.addEventListener('click', async () => {
+  setDiag('⏳ Solicitando permissão da câmera...', 'info');
+  try {
+    // Testa permissão antes
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    stream.getTracks().forEach(t => t.stop());
+  } catch (err) {
+    setDiag('❌ Câmera bloqueada: ' + err.message, 'danger');
+    return;
+  }
+
+  placeholder.style.display = 'none';
+  video.style.display = 'block';
+  canvas.style.display = 'block';
+  camera = new Camera(video, {
+    onFrame: async () => { await hands.send({ image: video }); },
+    width: 640, height: 480
+  });
+  camera.start();
+  setDiag('📷 Câmera ligada. Mostre a mão...', 'success');
+  btnCam.classList.add('d-none');
+  if (selectedDigit !== null) btnRecord.disabled = false;
+  btnRecord.classList.remove('d-none');
+});
+
+btnRecord.addEventListener('click', () => {
+  if (selectedDigit === null) {
+    alert('Selecione um dígito primeiro!');
+    return;
+  }
+  recording    = true;
+  sampleCount  = 0;
+  saving       = false;
+  lastSaveTime = 0;
+  countdownEnd = null;
+  recDigitEl.textContent = selectedDigit;
+  recCountEl.textContent = `0 / ${SAMPLES_TARGET}`;
+  recBar.style.width = '0%';
+  recBar.style.background = '';
+  recLabel.innerHTML = `Gravando dígito <strong>${selectedDigit}</strong>`;
+  recProgress.style.display = '';
+  recCountdown.style.display = '';
+  btnRecord.classList.add('d-none');
+  btnStopRec.classList.remove('d-none');
+});
+
+btnStopRec.addEventListener('click', () => {
+  recording = false;
+  saving    = false;
+  countdownEnd = null;
+  btnRecord.classList.remove('d-none');
+  btnStopRec.classList.add('d-none');
+  recCountdown.style.display = 'none';
+  refreshStatus();
+});
+</script>
+{% endblock %}

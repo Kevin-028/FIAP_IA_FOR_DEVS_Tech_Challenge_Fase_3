@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Painel — Assistente clínico{% endblock %}
+{% block page_heading %}Painel do plantão{% endblock %}
+
+{% block content %}
+<div class="clinic-hero">
+  <div>
+    <p class="clinic-hero-kicker mb-1">Fase 3 · hospital</p>
+    <h1 class="h3 mb-2">Assistente clínico com dados internos</h1>
+    <p class="mb-0 text-muted">
+      O LangGraph lê o prontuário, os exames pendentes e os protocolos
+      <strong>antes</strong> da LLM local responder. Toda resposta pede para
+      <strong>consultar o médico</strong>. Pedido de prescrição é recusado no chat.
+      Respostas clínicas em inglês, com PMID.
+    </p>
+  </div>
+  <div class="clinic-hero-actions">
+    <a href="/assistente" class="btn fiap-btn-primary">Abrir assistente</a>
+    {% if not engine.loaded %}
+    <a href="/modelo" class="btn fiap-btn-outline">Carregar o modelo</a>
+    {% else %}
+    <a href="/pacientes" class="btn fiap-btn-outline">Ver pacientes</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="card fiap-card h-100">
+      <div class="card-body">
+        <div class="text-muted small">LLM local</div>
+        <div class="h5 mb-1">{% if engine.loaded %}Carregada{% else %}Descarregada{% endif %}</div>
+        <div class="small text-muted">{% if sft.adapter_ok %}Adapter QLoRA presente{% else %}Adapter ausente{% endif %}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card fiap-card h-100">
+      <div class="card-body">
+        <div class="text-muted small">Accuracy no holdout</div>
+        <div class="h5 mb-1">{{ ft_acc or "—" }}</div>
+        <div class="small text-muted">Base {{ base_acc or "—" }} · n={{ sft.ft_n or "—" }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="/alertas" class="text-decoration-none text-reset">
+      <div class="card fiap-card h-100">
+        <div class="card-body">
+          <div class="text-muted small">Alertas</div>
+          <div class="h5 mb-1">{{ n_alerts }}</div>
+          <div class="small text-muted">{{ n_pending_exams }} exames pendentes</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card fiap-card h-100">
+      <div class="card-body">
+        <div class="text-muted small">Prescrição</div>
+        <div class="h5 mb-1">Recusada</div>
+        <div class="small text-muted">Aviso: consulte o médico</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card fiap-card mb-4">
+  <div class="card-header fiap-card-header">Como a pergunta vira resposta</div>
+  <div class="card-body">
+    <ol class="as-flow mb-0">
+      <li>Pergunta do médico</li>
+      <li>Prontuário (anonimizado)</li>
+      <li>Exames pendentes</li>
+      <li>Protocolos / PMID</li>
+      <li>LLM local + adapter</li>
+      <li>Guardrail</li>
+      <li>Alerta</li>
+      <li>Médico (sempre consultar)</li>
+    </ol>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card fiap-card h-100">
+      <div class="card-header fiap-card-header">Plantão</div>
+      <div class="list-group list-group-flush clinic-list">
+        <a href="/pacientes" class="list-group-item list-group-item-action">
+          <strong>Pacientes</strong>
+          <span class="text-muted small d-block">{{ n_patients }} prontuários sintéticos, sem nome nem CPF</span>
+        </a>
+        <a href="/assistente" class="list-group-item list-group-item-action">
+          <strong>Assistente</strong>
+          <span class="text-muted small d-block">Chat livre contextualizado pelo LangChain</span>
+        </a>
+        <a href="/modelo" class="list-group-item list-group-item-action">
+          <strong>Modelo</strong>
+          <span class="text-muted small d-block">Accuracy, macro-F1 e carregar o Qwen na memória</span>
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card fiap-card h-100">
+      <div class="card-header fiap-card-header">Limite de uso</div>
+      <div class="card-body">
+        <p class="mb-2">Apoio educacional. Não diagnostica, não prescreve e não substitui o médico.</p>
+        <p class="small text-muted mb-0">
+          Os números de treino vêm de <code>hospital_data/sft</code>.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

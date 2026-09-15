@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Alertas{% endblock %}
+{% block page_heading %}Alertas da equipe{% endblock %}
+{% block content %}
+<p class="text-muted">Alertas de exame pendente, falta de fonte ou pedido fora de escopo.</p>
+<div class="card fiap-card">
+  <div class="card-header fiap-card-header">Equipe médica</div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>Quando</th>
+          <th>Paciente</th>
+          <th>Severidade</th>
+          <th>Motivo</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in alerts %}
+        <tr>
+          <td class="small">{{ a.created_at }}</td>
+          <td><a href="/pacientes/{{ a.patient_id }}">{{ a.patient_id }}</a></td>
+          <td>{{ a.severity }}</td>
+          <td>{{ a.reason }}</td>
+          <td>{{ a.status }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-muted">Nenhum alerta.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

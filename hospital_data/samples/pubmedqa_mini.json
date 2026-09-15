@@ -1,0 +1,82 @@
+{
+  "labeled": [
+    {
+      "pubid": 17625060,
+      "question": "Do preoperative statins reduce atrial fibrillation after coronary artery bypass grafting?",
+      "contexts": ["Perioperative statin therapy was associated with a reduced incidence of postoperative atrial fibrillation after CABG."],
+      "long_answer": "Yes. Preoperative statin use is associated with less postoperative atrial fibrillation after CABG.",
+      "final_decision": "yes",
+      "split": "train"
+    },
+    {
+      "pubid": 10591357,
+      "question": "Do glucocorticoids improve symptoms in children with croup?",
+      "contexts": ["Glucocorticoids reduced croup symptoms and return visits compared with placebo."],
+      "long_answer": "Yes. Glucocorticoids improve croup symptoms and reduce return visits.",
+      "final_decision": "yes",
+      "split": "train"
+    },
+    {
+      "pubid": 22290281,
+      "question": "Do antibiotics improve recovery in uncomplicated diverticulitis?",
+      "contexts": ["Antibiotics did not speed recovery in CT-confirmed uncomplicated left-sided diverticulitis."],
+      "long_answer": "No. Antibiotics did not accelerate recovery in uncomplicated diverticulitis.",
+      "final_decision": "no",
+      "split": "train"
+    },
+    {
+      "pubid": 18973770,
+      "question": "Does pre-endoscopy proton pump inhibitor therapy reduce the need for endoscopic therapy in upper GI bleeding?",
+      "contexts": ["Trials of PPI before endoscopy show inconsistent effects on the need for endoscopic therapy."],
+      "long_answer": "Maybe. Evidence is mixed and does not uniformly show a reduction in endoscopic therapy.",
+      "final_decision": "maybe",
+      "split": "train"
+    },
+    {
+      "pubid": 25098060,
+      "question": "Does low-dose aspirin prevent preeclampsia in high-risk pregnancy?",
+      "contexts": ["Low-dose aspirin started in the second trimester reduced preeclampsia in high-risk women."],
+      "long_answer": "Yes. Low-dose aspirin reduces preeclampsia in selected high-risk pregnancies.",
+      "final_decision": "yes",
+      "split": "test"
+    },
+    {
+      "pubid": 25173350,
+      "question": "Does a single negative troponin exclude acute coronary syndrome?",
+      "contexts": ["A single negative troponin does not rule out ACS; serial sampling is required."],
+      "long_answer": "No. One negative troponin is not enough to exclude ACS.",
+      "final_decision": "no",
+      "split": "test"
+    }
+  ],
+  "artificial": [
+    {
+      "pubid": 9000001,
+      "question": "Is statin therapy associated with lower postoperative atrial fibrillation?",
+      "contexts": ["Observational cohorts report fewer atrial fibrillation events when statins are used around CABG."],
+      "long_answer": "Yes. Statin exposure is associated with fewer postoperative atrial fibrillation events.",
+      "final_decision": "yes"
+    },
+    {
+      "pubid": 9000002,
+      "question": "Is routine antibiotic therapy required for CT-proven uncomplicated diverticulitis?",
+      "contexts": ["A randomized trial found no faster recovery with antibiotics in uncomplicated diverticulitis."],
+      "long_answer": "No. Routine antibiotics are not required for recovery in uncomplicated diverticulitis.",
+      "final_decision": "no"
+    },
+    {
+      "pubid": 9000003,
+      "question": "Do perioperative statins reduce atrial fibrillation after bypass surgery?",
+      "contexts": ["Meta-analysis of perioperative statin use shows a reduction in new atrial fibrillation."],
+      "long_answer": "Yes. Perioperative statins reduce new atrial fibrillation after bypass surgery.",
+      "final_decision": "yes"
+    },
+    {
+      "pubid": 9000004,
+      "question": "Does withholding antibiotics worsen uncomplicated diverticulitis?",
+      "contexts": ["Patients managed without antibiotics had similar complication rates."],
+      "long_answer": "No. Withholding antibiotics did not worsen uncomplicated diverticulitis in the trial.",
+      "final_decision": "no"
+    }
+  ]
+}

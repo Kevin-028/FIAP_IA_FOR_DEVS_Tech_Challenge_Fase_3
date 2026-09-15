@@ -1,0 +1,54 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flask Web (Debug)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "flask",
+      "cwd": "${workspaceFolder}/web",
+      "args": ["--app", "app", "run", "--debug", "--port", "5000"],
+      "console": "integratedTerminal",
+      "env": {
+        "FLASK_ENV": "development",
+        "FLASK_DEBUG": "1",
+        "PYTHONPATH": "${workspaceFolder};${workspaceFolder}/web"
+      },
+      "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "jinja": true,
+      "autoReload": {
+        "enable": true
+      }
+    },
+    {
+      "name": "Pytest: todos os testes",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "cwd": "${workspaceFolder}",
+      "args": ["tests", "-v", "-s"],
+      "env": {
+        "FIAP_LLM_PROVIDER": "fallback"
+      },
+      "envFile": "${workspaceFolder}/.env.test",
+      "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Pytest: arquivo atual",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "cwd": "${workspaceFolder}",
+      "args": ["${file}", "-v", "-s"],
+      "env": {
+        "FIAP_LLM_PROVIDER": "fallback"
+      },
+      "envFile": "${workspaceFolder}/.env.test",
+      "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}

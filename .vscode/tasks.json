@@ -1,0 +1,52 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "pytest: todos",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["-m", "pytest", "tests", "-v"],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "FIAP_LLM_PROVIDER": "fallback"
+        }
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "pytest: com cobertura",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": [
+        "-m",
+        "pytest",
+        "tests",
+        "-v",
+        "--cov=web",
+        "--cov=otimizacao_genetica",
+        "--cov-report=term-missing"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "FIAP_LLM_PROVIDER": "fallback"
+        }
+      },
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

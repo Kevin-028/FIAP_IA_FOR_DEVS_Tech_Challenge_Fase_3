@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Pacientes — Assistente clínico{% endblock %}
+{% block page_heading %}Pacientes{% endblock %}
+{% block content %}
+<p class="text-muted">Prontuários sintéticos. Nome e CPF não entram no modelo. Abra o registro, registre exame pendente e pergunte ao assistente.</p>
+<div class="card fiap-card">
+  <div class="card-header fiap-card-header">{{ patients|length }} prontuários anonimizados</div>
+  <div class="list-group list-group-flush">
+    {% for p in patients %}
+    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-start gap-3" href="/pacientes/{{ p.id }}">
+      <span>
+        <strong>{{ p.display_name }}</strong>
+        <span class="text-muted small d-block">{{ p.diagnosis }}</span>
+      </span>
+      <span class="small text-muted">{{ p.id }}</span>
+    </a>
+    {% else %}
+    <div class="list-group-item">Nenhum paciente. Rode <code>python -m hospital.seed</code>.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

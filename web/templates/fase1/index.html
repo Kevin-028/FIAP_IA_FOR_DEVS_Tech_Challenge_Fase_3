@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Exame de referência — Apoio ao Diagnóstico{% endblock %}
+{% block page_heading %}Exame de referência{% endblock %}
+{% block body_class %}modulo-fase1{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<div class="fiap-hero rounded-4 p-4 mb-4 d-flex align-items-center gap-3">
+  <div class="clinic-hero-mark" aria-hidden="true">F1</div>
+  <div>
+    <span class="fase1-badge mb-2 d-inline-block">MODELO DE REFERÊNCIA</span>
+    <h1 class="h3 mb-1 text-white fw-bold">Novo exame — baseline</h1>
+    <p class="mb-0 text-white opacity-75">
+      Regressão logística com configuração padrão da Fase 1.
+      Use para contraste com o laudo do modelo otimizado.
+    </p>
+  </div>
+</div>
+
+<!-- Modelo info cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card fiap-stat-card text-center">
+      <div class="card-body py-2">
+        <div class="fiap-stat-value">{{ "%.1f"|format(metricas.Acuracia * 100) }}%</div>
+        <div class="fiap-stat-label">Acurácia</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card fiap-stat-card text-center">
+      <div class="card-body py-2">
+        <div class="fiap-stat-value">{{ "%.1f"|format(metricas.Recall * 100) }}%</div>
+        <div class="fiap-stat-label">Sensibilidade</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card fiap-stat-card text-center">
+      <div class="card-body py-2">
+        <div class="fiap-stat-value">{{ "%.3f"|format(metricas['ROC-AUC']) }}</div>
+        <div class="fiap-stat-label">ROC-AUC</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card fiap-stat-card text-center">
+      <div class="card-body py-2">
+        <div class="fiap-stat-value">{{ nome_modelo }}</div>
+        <div class="fiap-stat-label">Algoritmo</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Risk legend -->
+<div class="card fiap-card mb-4">
+  <div class="card-body py-2">
+    <div class="d-flex flex-wrap gap-3 justify-content-center align-items-center">
+      <span class="fw-semibold text-muted small">Interpretação do resultado:</span>
+      <span class="fiap-legend-badge badge-success-soft">🟢 0–20% Baixíssimo</span>
+      <span class="fiap-legend-badge badge-warning-soft">🟡 20–50% Moderado</span>
+      <span class="fiap-legend-badge badge-orange-soft">🟠 50–75% Alto</span>
+      <span class="fiap-legend-badge badge-danger-soft">🔴 75–100% Muito Alto</span>
+    </div>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger" role="alert">
+  <strong>Erro ao processar:</strong> {{ error }}
+</div>
+{% endif %}
+
+<!-- Form -->
+<form method="POST" action="/fase1/predict" id="prediction-form" novalidate>
+
+  <!-- ── Identificação do Paciente (opcional) ── -->
+  <div class="card fiap-card mb-4">
+    <div class="card-header fiap-card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">🏥 Identificação do Paciente <span class="badge bg-secondary ms-2" style="font-size:0.7rem;font-weight:400">opcional</span></h5>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12 col-md-5">
+          <label class="form-label fw-semibold small" for="paciente_nome">Nome</label>
+          <input type="text" class="form-control fiap-input" id="paciente_nome" name="paciente_nome"
+                 placeholder="Nome completo do paciente" />
+        </div>
+        <div class="col-6 col-md-3">
+          <label class="form-label fw-semibold small" for="paciente_prontuario">Nº Prontuário</label>
+          <input type="text" class="form-control fiap-input" id="paciente_prontuario" name="paciente_prontuario"
+                 placeholder="000000" />
+        </div>
+        <div class="col-6 col-md-4">
+          <label class="form-label fw-semibold small" for="paciente_data">Data do Exame</label>
+          <input type="date" class="form-control fiap-input" id="paciente_data" name="paciente_data" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Grupos clínicos ── -->
+  {% for group_key, group in groups.items() %}
+  <div class="card fiap-card mb-4">
+    <div class="card-header fiap-card-header">
+      <h5 class="mb-0">{{ group.icon }} {{ group.title }}</h5>
+      <p class="mb-0 mt-1 text-white opacity-75 small">{{ group.subtitle }}</p>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        {% for feat in group.features %}
+        <div class="col-12 col-sm-6 col-lg-4">
+          <label for="{{ feat.name }}" class="form-label fw-semibold small d-flex align-items-center gap-1">
+            {{ feat.label }}
+            <span class="fiap-tooltip-icon"
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="top"
+                  title="{{ feat.tooltip }}">ⓘ</span>
+          </label>
+          <input
+            type="number"
+            class="form-control fiap-input"
+            id="{{ feat.name }}"
+            name="{{ feat.name }}"
+            step="{{ feat.step }}"
+            min="{{ feat.min }}"
+            max="{{ feat.max }}"
+            placeholder="{{ feat.placeholder }}"
+            required
+          />
+          <div class="form-text fiap-range-hint">
+            Faixa típica: {{ feat.min }} – {{ feat.max }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <!-- ── Ações ── -->
+  <div class="card fiap-card mb-5">
+    <div class="card-body">
+      <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-sample-benign">
+            📋 Carregar exemplo benigno
+          </button>
+          <button type="button" class="btn btn-outline-warning btn-sm" id="btn-sample-malign">
+            ⚠️ Carregar exemplo maligno
+          </button>
+          <a href="/fase1/exemplos" class="btn btn-outline-info btn-sm">
+            📋 Ver 14 casos de exemplo
+          </a>
+          <button type="button" class="btn btn-outline-danger btn-sm" id="btn-clear">
+            🗑 Limpar
+          </button>
+        </div>
+        <button type="submit" class="btn fiap-btn-primary px-5">
+          Gerar laudo &rarr;
+        </button>
+      </div>
+    </div>
+  </div>
+
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Ativa tooltips do Bootstrap
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+    new bootstrap.Tooltip(el, { trigger: 'hover focus' });
+  });
+
+  // Exemplos pré-definidos
+  const BENIGN = {
+    smoothness_mean: 0.090, compactness_mean: 0.060, symmetry_mean: 0.170,
+    fractal_dimension_mean: 0.060, radius_se: 0.250, texture_se: 1.000,
+    smoothness_se: 0.006, compactness_se: 0.015, concavity_se: 0.010,
+    concave_points_se: 0.005, symmetry_se: 0.018, fractal_dimension_se: 0.003,
+    texture_worst: 20.0, perimeter_worst: 80.0, smoothness_worst: 0.115,
+    compactness_worst: 0.130, concavity_worst: 0.060, concave_points_worst: 0.040,
+    symmetry_worst: 0.250, fractal_dimension_worst: 0.072
+  };
+  const MALIGN = {
+    smoothness_mean: 0.130, compactness_mean: 0.240, symmetry_mean: 0.270,
+    fractal_dimension_mean: 0.086, radius_se: 1.200, texture_se: 3.500,
+    smoothness_se: 0.018, compactness_se: 0.080, concavity_se: 0.100,
+    concave_points_se: 0.035, symmetry_se: 0.055, fractal_dimension_se: 0.015,
+    texture_worst: 36.0, perimeter_worst: 185.0, smoothness_worst: 0.180,
+    compactness_worst: 0.700, concavity_worst: 0.900, concave_points_worst: 0.220,
+    symmetry_worst: 0.480, fractal_dimension_worst: 0.130
+  };
+
+  function fillForm(data) {
+    Object.entries(data).forEach(([k, v]) => {
+      const el = document.getElementById(k);
+      if (el) el.value = v;
+    });
+  }
+
+  document.getElementById("btn-sample-benign").addEventListener("click", () => fillForm(BENIGN));
+  document.getElementById("btn-sample-malign").addEventListener("click", () => fillForm(MALIGN));
+  document.getElementById("btn-clear").addEventListener("click", () => {
+    document.querySelectorAll("#prediction-form input[type='number']").forEach(el => el.value = "");
+  });
+</script>
+{% endblock %}

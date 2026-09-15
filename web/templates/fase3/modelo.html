@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Modelo local — Assistente clínico{% endblock %}
+{% block page_heading %}Modelo local{% endblock %}
+
+{% block content %}
+<div class="clinic-hero">
+  <div>
+    <p class="clinic-hero-kicker mb-1">Qwen 2.5 3B · QLoRA</p>
+    <h1 class="h3 mb-2">O que o treino já gravou</h1>
+    <p class="mb-0 text-muted">
+      Métricas em <code>hospital_data/sft</code> e adapter em
+      <code>models/adapter</code>.
+    </p>
+  </div>
+</div>
+
+<div class="card fiap-card mb-4">
+  <div class="card-header fiap-card-header">Motor Hugging Face</div>
+  <div class="card-body">
+    <p class="mb-1">Status: <strong id="engineLoaded">{{ 'carregado' if engine.loaded else 'descarregado' }}</strong></p>
+    <p class="small text-muted mb-1">Base: <code id="enginePath">{{ engine.path }}</code></p>
+    <p class="small text-muted mb-3">Adapter: <code>{{ sft.adapter_dir }}</code> · {% if sft.adapter_ok %}encontrado{% else %}ausente{% endif %}</p>
+    <button type="button" class="btn fiap-btn-primary btn-sm" id="btnLoad">Carregar</button>
+    <button type="button" class="btn fiap-btn-outline btn-sm" id="btnUnload">Descarregar</button>
+    <p class="small text-danger mt-2 mb-0" id="engineError">{{ engine.error or '' }}</p>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card fiap-card h-100">
+      <div class="card-body">
+        <div class="text-muted small">Exemplos no SFT</div>
+        <div class="h4 mb-0">{{ sft.n or "—" }}</div>
+        <div class="small text-muted mt-1">Hospital {{ sft.hospital_unique or sft.hospital or "—" }} · PubMedQA {{ sft.pubmed or "—" }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card fiap-card h-100">
+      <div class="card-body">
+        <div class="text-muted small">Loss</div>
+        <div class="h4 mb-0">
+          {% if sft.loss_start is not none %}{{ '%.2f'|format(sft.loss_start) }} → {{ '%.2f'|format(sft.loss_end) }}{% else %}—{% endif %}
+        </div>
+        <div class="small text-muted mt-1">{{ sft.epochs or "—" }} época · r={{ sft.lora_r or "—" }} · seq {{ sft.max_seq or "—" }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card fiap-card h-100">
+      <div class="card-body">
+        <div class="text-muted small">Holdout labeled</div>
+        <div class="h4 mb-0">{{ sft.ft_n or "—" }}</div>
+        <div class="small text-muted mt-1">Fora do SFT · yes / no / maybe</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card fiap-card mb-4">
+  <div class="card-header fiap-card-header">Base vs fine-tuned</div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr><th></th><th>Accuracy</th><th>Macro-F1</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Qwen base</td>
+          <td>{{ base_acc or "—" }}</td>
+          <td>{{ base_f1 or "—" }}</td>
+        </tr>
+        <tr>
+          <td><strong>Qwen + QLoRA</strong></td>
+          <td><strong>{{ ft_acc or "—" }}</strong></td>
+          <td><strong>{{ ft_f1 or "—" }}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card fiap-card">
+      <div class="card-header fiap-card-header">Matriz — base</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>ouro \\ pred</th><th>yes</th><th>no</th><th>maybe</th></tr></thead>
+          <tbody>
+            {% for row in base_matrix %}
+            <tr><th>{{ row.gold }}</th><td>{{ row.yes }}</td><td>{{ row.no }}</td><td>{{ row.maybe }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card fiap-card">
+      <div class="card-header fiap-card-header">Matriz — fine-tuned</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>ouro \\ pred</th><th>yes</th><th>no</th><th>maybe</th></tr></thead>
+          <tbody>
+            {% for row in ft_matrix %}
+            <tr><th>{{ row.gold }}</th><td>{{ row.yes }}</td><td>{{ row.no }}</td><td>{{ row.maybe }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function engineAction(url) {
+    const res = await fetch(url, { method: "POST" });
+    const data = await res.json();
+    document.getElementById("engineLoaded").textContent = data.loaded ? "carregado" : "descarregado";
+    document.getElementById("engineError").textContent = data.error || "";
+  }
+  document.getElementById("btnLoad").onclick = () => engineAction("/api/llm/engine/load");
+  document.getElementById("btnUnload").onclick = () => engineAction("/api/llm/engine/unload");
+</script>
+{% endblock %}

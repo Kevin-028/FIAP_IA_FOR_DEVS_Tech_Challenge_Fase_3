@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Casos de referência — Apoio ao Diagnóstico{% endblock %}
+{% block page_heading %}Casos de referência{% endblock %}
+{% block body_class %}modulo-fase1{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<div class="fiap-hero rounded-4 p-3 p-md-4 mb-4 d-flex align-items-center gap-3">
+  <div class="clinic-hero-mark" aria-hidden="true">☰</div>
+  <div>
+    <span class="fase1-badge mb-2 d-inline-block">CASOS ROTULADOS</span>
+    <h1 class="h3 mb-1 text-white fw-bold">Casos de referência</h1>
+    <p class="mb-0 text-white opacity-75 small">
+      Exames do dataset Wisconsin · parecer com <strong>{{ nome_modelo }}</strong>.
+      Filtre por diagnóstico para explorar variações clínicas.
+    </p>
+  </div>
+</div>
+
+<!-- Legenda das categorias -->
+<div class="card fiap-card mb-4">
+  <div class="card-body py-2">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <span class="fw-semibold text-muted small me-1">Categorias:</span>
+      <span class="badge fiap-badge-success">🟢 Benigno Evidente</span>
+      <span class="badge fiap-badge-info">🔵 Benigno com Atipia Leve</span>
+      <span class="badge fiap-badge-danger">🔴 Maligno Evidente</span>
+      <span class="badge fiap-badge-warning text-dark">🟡 Maligno Borderline</span>
+      <span class="badge fiap-badge-fp">⚠️ Falso Positivo</span>
+      <span class="badge fiap-badge-fn">⚠️ Falso Negativo</span>
+    </div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="d-flex flex-wrap gap-2 mb-4" id="filtros">
+  <button class="btn btn-sm fiap-filter-btn active" data-filter="all">Todos ({{ examples|length }})</button>
+  <button class="btn btn-sm fiap-filter-btn" data-filter="benigno_claro">🟢 Benigno Evidente</button>
+  <button class="btn btn-sm fiap-filter-btn" data-filter="benigno_limiar">🔵 Benigno com Atipia</button>
+  <button class="btn btn-sm fiap-filter-btn" data-filter="maligno_claro">🔴 Maligno Evidente</button>
+  <button class="btn btn-sm fiap-filter-btn" data-filter="maligno_limiar">🟡 Borderline</button>
+  <button class="btn btn-sm fiap-filter-btn" data-filter="falso_positivo">⚠️ Falso Positivo</button>
+  <button class="btn btn-sm fiap-filter-btn" data-filter="falso_negativo">⚠️ Falso Negativo</button>
+</div>
+
+<!-- Explicação dos casos especiais -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-6">
+    <div class="alert fiap-alert-fp mb-0">
+      <strong>⚠️ O que é um Falso Positivo?</strong><br>
+      O modelo previu <em>MALIGNO</em>, mas o tumor era <em>BENIGNO</em>.
+      Isso pode gerar angústia e exames desnecessários, mas é preferível a deixar um caso maligno passar.
+    </div>
+  </div>
+  <div class="col-12 col-md-6">
+    <div class="alert fiap-alert-fn mb-0">
+      <strong>⚠️ O que é um Falso Negativo?</strong><br>
+      O modelo previu <em>BENIGNO</em>, mas o tumor era <em>MALIGNO</em>.
+      É o erro mais grave em triagem oncológica — por isso o limiar foi ajustado para minimizá-lo
+      (apenas {{ examples | selectattr('cat','eq','falso_negativo') | list | length }} casos em 569).
+    </div>
+  </div>
+</div>
+
+<!-- Cards de exemplos -->
+<div class="row g-3" id="cards-container">
+  {% for ex in examples %}
+  <div class="col-12 col-sm-6 col-xl-4 example-card" data-cat="{{ ex.cat }}">
+    <div class="card fiap-card h-100 fiap-ex-card fiap-ex-{{ ex.color }}">
+      <div class="card-header fiap-ex-header-{{ ex.color }} d-flex justify-content-between align-items-center py-2 px-3">
+        <span class="badge fiap-badge-{{ ex.color }} {% if ex.color in ['warning','info'] %}text-dark{% endif %}">
+          {{ ex.icon }} {{ ex.label }}
+        </span>
+        <span class="small fw-bold text-white">#{{ ex.id + 1 }}</span>
+      </div>
+
+      <div class="card-body pb-2">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="fiap-ex-prob {% if ex.prob >= 75 %}text-danger{% elif ex.prob >= 50 %}text-orange{% elif ex.prob >= 20 %}text-warning{% else %}text-success{% endif %}">
+            {{ ex.prob }}%
+          </div>
+          <div class="flex-grow-1">
+            <div class="fiap-gauge-track" style="height:10px">
+              <div class="fiap-gauge-fill fiap-gauge-{% if ex.prob >= 75 %}danger{% elif ex.prob >= 50 %}orange{% elif ex.prob >= 20 %}warning{% else %}success{% endif %}"
+                   style="width:{{ ex.prob }}%"></div>
+            </div>
+            <div class="d-flex justify-content-between" style="font-size:0.7rem;color:#999">
+              <span>0%</span><span>50%</span><span>100%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 mb-3">
+          <div class="fiap-verdict-chip flex-fill text-center">
+            <div style="font-size:0.65rem;color:#888">DIAGNÓSTICO REAL</div>
+            <div class="fw-bold small {% if ex.real == 'MALIGNO' %}text-danger{% else %}text-success{% endif %}">
+              {{ ex.real }}
+            </div>
+          </div>
+          <div class="fiap-verdict-chip flex-fill text-center">
+            <div style="font-size:0.65rem;color:#888">PREDIÇÃO ({{ nome_modelo }})</div>
+            <div class="fw-bold small {% if ex.pred == 'MALIGNO' %}text-danger{% else %}text-success{% endif %}">
+              {{ ex.pred }}
+              {% if ex.real != ex.pred %}<span class="text-warning">✗</span>{% else %}<span class="text-success">✓</span>{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <button class="btn btn-link btn-sm fiap-expand-btn p-0 mb-2"
+                  data-bs-toggle="collapse" data-bs-target="#dados-{{ ex.id }}">
+            Ver medidas ▾
+          </button>
+          <div class="collapse" id="dados-{{ ex.id }}">
+            <div class="row g-1">
+              {% for f in features %}
+              <div class="col-6" style="font-size:0.72rem">
+                <span class="text-muted">{{ feature_meta[f]['label']|truncate(28, True, '…') }}:</span>
+                <strong>{{ ex.dados[f] }}</strong>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
+        <form method="POST" action="/fase1/predict" class="mb-2">
+          {% for f in features %}
+          <input type="hidden" name="{{ f }}" value="{{ ex.dados[f] }}" />
+          {% endfor %}
+          <input type="hidden" name="paciente_nome" value="Exemplo #{{ ex.id + 1 }} — {{ ex.label }}" />
+          <button type="submit" class="btn fiap-btn-primary btn-sm w-100">
+            Abrir exame de referência →
+          </button>
+        </form>
+        <form method="POST" action="/comparar/predict">
+          {% for f in features %}
+          <input type="hidden" name="{{ f }}" value="{{ ex.dados[f] }}" />
+          {% endfor %}
+          <input type="hidden" name="paciente_nome" value="Exemplo #{{ ex.id + 1 }} — {{ ex.label }}" />
+          <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
+            Comparar M1 vs M2
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="text-center mt-4 mb-5 d-flex flex-wrap gap-2 justify-content-center">
+  <a href="/fase1" class="btn btn-outline-danger">← Nova Análise (M1)</a>
+  <a href="/comparar" class="btn fiap-btn-outline">⚖️ Comparar Modelos</a>
+  <a href="/" class="btn btn-outline-secondary">🏠 Início</a>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelectorAll('.fiap-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.fiap-filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const f = btn.dataset.filter;
+      document.querySelectorAll('.example-card').forEach(card => {
+        card.style.display = (f === 'all' || card.dataset.cat === f) ? '' : 'none';
+      });
+    });
+  });
+</script>
+{% endblock %}

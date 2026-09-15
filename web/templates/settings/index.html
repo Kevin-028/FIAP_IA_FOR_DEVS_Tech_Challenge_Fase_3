@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Configurações — Apoio ao Diagnóstico{% endblock %}
+{% block page_heading %}Configurações{% endblock %}
+{% block body_class %}page-settings{% endblock %}
+
+{% block content %}
+<div class="fiap-hero rounded-4 p-4 mb-4">
+  <h1 class="h3 text-white fw-bold mb-1">Configurações</h1>
+  <p class="text-white opacity-75 mb-0">
+    Preferências da interface · salvas neste navegador
+  </p>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    {% for group in schema %}
+    <section class="card fiap-card mb-4" id="settings-{{ group.group }}" data-settings-group="{{ group.group }}">
+      <div class="card-header fiap-card-header">{{ group.title }}</div>
+      <div class="card-body">
+        {% if group.description %}
+        <p class="text-muted small mb-3">{{ group.description }}</p>
+        {% endif %}
+
+        {% for item in group.fields %}
+        <div class="fiap-setting-block mb-3" data-setting-item="{{ item.key }}">
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+            <div>
+              <div class="fw-semibold">{{ item.label }}</div>
+              {% if item.type == 'theme' %}
+              <div class="small text-muted">
+                Aplicado agora:
+                <strong id="fiap-theme-resolved">—</strong>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if item.type == 'theme' or item.type == 'select' %}
+          <div class="fiap-setting-choices" role="group" aria-label="{{ item.label }}">
+            {% for opt in item.options %}
+            <button type="button"
+                    class="fiap-setting-choice"
+                    data-setting-key="{{ item.key }}"
+                    data-setting-value="{{ opt.value }}"
+                    aria-pressed="false">
+              <span class="fiap-setting-choice-label">{{ opt.label }}</span>
+              {% if opt.hint %}<span class="fiap-setting-choice-hint">{{ opt.hint }}</span>{% endif %}
+            </button>
+            {% endfor %}
+          </div>
+          {% elif item.type == 'toggle' %}
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox"
+                   id="setting-{{ item.key }}"
+                   data-setting-key="{{ item.key }}">
+            <label class="form-check-label" for="setting-{{ item.key }}">{{ item.label }}</label>
+          </div>
+          {% else %}
+          <input class="form-control" data-setting-key="{{ item.key }}"
+                 type="{{ 'number' if item.type == 'number' else 'text' }}">
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endfor %}
+
+    {# Slot visual para deixar claro que a página cresce com novas seções #}
+    <section class="card fiap-card fiap-settings-slot mb-4">
+      <div class="card-body">
+        <div class="fw-semibold mb-1">Mais opções</div>
+        <p class="small text-muted mb-0">
+          Esta área está pronta para novas preferências (idioma, densidade, limiar padrão, etc.).
+          Basta acrescentar um grupo no schema do backend — a página e o
+          <code>FiapSettings</code> já leem chaves novas automaticamente.
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card fiap-card mb-3">
+      <div class="card-header fiap-card-header">Sobre as preferências</div>
+      <div class="card-body small">
+        <ul class="mb-3 ps-3">
+          <li>Salvas só neste navegador (<code>localStorage</code>)</li>
+          <li>Não alteram o modelo nem o servidor</li>
+          <li>Tema <strong>Sistema</strong> acompanha o modo do SO</li>
+        </ul>
+        <button type="button" class="btn btn-outline-secondary btn-sm w-100" id="fiap-settings-reset">
+          Restaurar padrões
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/settings_page.js') }}"></script>
+{% endblock %}

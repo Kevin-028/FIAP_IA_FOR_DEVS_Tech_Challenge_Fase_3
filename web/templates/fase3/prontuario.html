@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ patient.display_name }} — Prontuário{% endblock %}
+{% block page_heading %}{{ patient.display_name }}{% endblock %}
+{% block content %}
+<p class="mb-3">
+  <a href="/pacientes" class="small">← Pacientes</a>
+</p>
+<div class="row g-3">
+  <div class="col-md-5">
+    <div class="card fiap-card mb-3">
+      <div class="card-header fiap-card-header">Registro anonimizado</div>
+      <div class="card-body">
+        <p><strong>ID</strong> {{ patient.id }}</p>
+        <p><strong>Prontuário</strong> {{ patient.chart_hash }}</p>
+        <p><strong>Alergias</strong> {{ patient.allergies or "—" }}</p>
+        <p class="mb-0"><strong>Diagnóstico</strong> {{ patient.diagnosis }}</p>
+      </div>
+    </div>
+    <a class="btn fiap-btn-primary" href="/assistente?patient_id={{ patient.id }}">Perguntar sobre este paciente</a>
+  </div>
+  <div class="col-md-7">
+    <div class="card fiap-card">
+      <div class="card-header fiap-card-header">Exames {% if pending %}<span class="badge bg-warning text-dark">{{ pending|length }} pendente(s)</span>{% endif %}</div>
+      <div class="card-body">
+        <p class="small text-muted">Registrar o resultado atualiza o prontuário para a próxima pergunta.</p>
+        {% for exam in exams %}
+        <div class="border-bottom py-2">
+          <strong>{{ exam.name }}</strong>
+          <span class="badge {{ 'bg-warning text-dark' if exam.status == 'pending' else 'bg-secondary' }}">{{ exam.status }}</span>
+          <div class="small text-muted">{{ exam.result or "sem resultado" }}</div>
+          {% if exam.status == 'pending' %}
+          <form method="post" action="/pacientes/{{ patient.id }}/exames/{{ exam.id }}/resultado" class="d-flex gap-2 mt-2">
+            <input class="form-control form-control-sm" name="result" placeholder="Registrar resultado" required>
+            <button class="btn btn-sm fiap-btn-primary" type="submit">Salvar</button>
+          </form>
+          {% endif %}
+        </div>
+        {% else %}
+        <p class="mb-0 text-muted">Nenhum exame neste prontuário.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

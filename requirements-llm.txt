@@ -1,0 +1,14 @@
+# Runtime do assistente (além de requirements.txt).
+# PyTorch CUDA: pip install torch --index-url https://download.pytorch.org/whl/cu128
+torch
+transformers>=4.46.0
+peft>=0.13.0
+accelerate>=1.0.0
+bitsandbytes>=0.45.0
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+langgraph>=0.2.60
+langgraph-checkpoint-sqlite>=2.0.0
+chromadb>=0.5.0
+sentence-transformers>=3.0.0

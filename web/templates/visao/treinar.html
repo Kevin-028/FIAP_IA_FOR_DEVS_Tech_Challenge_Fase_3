@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Treinar Modelo — Gestos | FIAP{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8">
+
+    <div class="fiap-section-header mb-4">
+      <h1 class="fiap-page-title">🏋️ Treinar Modelo</h1>
+      <p class="fiap-page-subtitle">
+        Treine o classificador de gestos com os dados coletados.
+        O modelo usa <strong>Random Forest</strong> com validação cruzada 5-fold.
+      </p>
+    </div>
+
+    <!-- Amostras disponíveis -->
+    <div class="fiap-card mb-4">
+      <div class="fiap-card-header">📊 Dados Disponíveis</div>
+      <div class="fiap-card-body">
+        <div class="row g-2 mb-3">
+          {% for d in range(1, 6) %}
+          {% set cnt = status.samples_per_digit.get(d|string, 0) %}
+          <div class="col-6 col-sm-4 col-md-2">
+            <div class="text-center p-2 rounded" style="background:rgba(239,51,64,0.07)">
+              <div class="fw-bold fs-5" style="color:var(--fiap-red)">{{ d }}</div>
+              <div class="small {% if cnt < 20 %}text-danger{% elif cnt < 100 %}text-warning{% else %}text-success{% endif %}">
+                {{ cnt }} amostras
+              </div>
+              <div class="progress mt-1" style="height:4px;border-radius:4px">
+                <div class="progress-bar"
+                     style="width:{{ [cnt/200*100,100]|min }}%;background:{% if cnt<20 %}#dc3545{% elif cnt<100 %}#ffc107{% else %}#198754{% endif %}"
+                     role="progressbar"></div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+          <div>
+            <span class="text-muted small">Total:</span>
+            <strong> {{ status.total_samples }} amostras</strong>
+          </div>
+          {% if status.total_samples < 50 %}
+          <div class="alert alert-warning py-1 px-2 mb-0 small">
+            ⚠️ Colete pelo menos 50 amostras antes de treinar.
+          </div>
+          {% endif %}
+          <a href="/visao/coletar" class="btn btn-outline-secondary btn-sm ms-auto">
+            📸 Coletar mais dados
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botão de treino -->
+    <div class="fiap-card mb-4">
+      <div class="fiap-card-header">🚀 Executar Treinamento</div>
+      <div class="fiap-card-body text-center">
+        <p class="text-muted mb-3">
+          O treinamento leva alguns segundos. Não feche a página.
+        </p>
+        <button id="btnTrain" class="btn fiap-btn-primary btn-lg px-5"
+                {% if status.total_samples < 50 %}disabled{% endif %}>
+          🏋️ Treinar Agora
+        </button>
+
+        <!-- Spinner -->
+        <div id="trainSpinner" class="mt-3" style="display:none">
+          <div class="spinner-border text-danger" role="status"></div>
+          <p class="mt-2 text-muted">Treinando modelo...</p>
+        </div>
+
+        <!-- Resultado -->
+        <div id="trainResult" class="mt-3" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Modelo atual -->
+    {% if status.model_loaded %}
+    <div class="fiap-card mb-4">
+      <div class="fiap-card-header">✅ Modelo Atual</div>
+      <div class="fiap-card-body">
+        <div class="row g-3 text-center">
+          <div class="col-6 col-md-3">
+            <div class="small text-muted">Acurácia CV</div>
+            <div class="fw-bold fs-4" style="color:var(--fiap-red)">
+              {{ "%.1f%%"|format(status.metricas.get('cv_accuracy_mean', 0) * 100) }}
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="small text-muted">Acurácia Teste</div>
+            <div class="fw-bold fs-4">
+              {{ "%.1f%%"|format(status.metricas.get('test_accuracy', 0) * 100) }}
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="small text-muted">Amostras</div>
+            <div class="fw-bold fs-4">{{ status.metricas.get('n_samples', '—') }}</div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="small text-muted">Classes</div>
+            <div class="fw-bold fs-4">{{ status.classes | join(', ') }}</div>
+          </div>
+        </div>
+
+        {% if cm_url %}
+        <div class="text-center mt-3">
+          <p class="small text-muted mb-1">Matriz de Confusão</p>
+          <img src="{{ cm_url }}" alt="Matriz de Confusão" class="img-fluid rounded"
+               style="max-width:480px">
+        </div>
+        {% endif %}
+
+        <div class="text-center mt-3">
+          <a href="/visao" class="btn fiap-btn-primary">✋ Usar o Modelo</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('btnTrain').addEventListener('click', function () {
+  const btn     = this;
+  const spinner = document.getElementById('trainSpinner');
+  const result  = document.getElementById('trainResult');
+
+  btn.disabled = true;
+  spinner.style.display = '';
+  result.style.display  = 'none';
+
+  fetch('/visao/api/train', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      spinner.style.display = 'none';
+      result.style.display  = '';
+
+      if (data.success) {
+        const m = data.metricas;
+        result.innerHTML = `
+          <div class="alert alert-success">
+            <strong>✅ Treinamento concluído!</strong>
+          </div>
+          <div class="row g-2 text-center mt-2">
+            <div class="col-6">
+              <div class="small text-muted">Acurácia CV</div>
+              <div class="fw-bold fs-4" style="color:var(--fiap-red)">
+                ${(m.cv_accuracy_mean * 100).toFixed(1)}% ± ${(m.cv_accuracy_std * 100).toFixed(1)}%
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="small text-muted">Acurácia Teste</div>
+              <div class="fw-bold fs-4">${(m.test_accuracy * 100).toFixed(1)}%</div>
+            </div>
+          </div>
+          <div class="mt-3">
+            <details>
+              <summary class="btn btn-sm btn-outline-secondary">Ver relatório completo</summary>
+              <pre class="mt-2 p-2 rounded bg-dark text-light small text-start" style="overflow-x:auto">${data.report}</pre>
+            </details>
+          </div>
+          <div class="mt-3">
+            <a href="/visao/treinar" class="btn btn-sm btn-outline-secondary me-2">🔄 Atualizar página</a>
+            <a href="/visao" class="btn fiap-btn-primary btn-sm">✋ Usar o Modelo</a>
+          </div>`;
+      } else {
+        result.innerHTML = `
+          <div class="alert alert-danger">
+            <strong>❌ Erro:</strong> ${data.error}
+          </div>
+          <a href="/visao/coletar" class="btn fiap-btn-primary btn-sm">📸 Coletar Dados</a>`;
+        btn.disabled = false;
+      }
+    })
+    .catch(err => {
+      spinner.style.display = 'none';
+      result.style.display  = '';
+      result.innerHTML = `<div class="alert alert-danger">Erro de rede: ${err.message}</div>`;
+      btn.disabled = false;
+    });
+});
+</script>
+{% endblock %}

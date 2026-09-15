@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Comparação de laudos — Apoio ao Diagnóstico{% endblock %}
+{% block page_heading %}Comparação de laudos{% endblock %}
+
+{% block content %}
+<div class="fiap-hero rounded-4 p-4 mb-4">
+  <h1 class="h3 text-white fw-bold">Laudos lado a lado</h1>
+  <p class="text-white opacity-75 mb-0">
+    Concordância: <strong>{{ result.concordancia_label }}</strong>
+    · Diferença de probabilidade: <strong>{{ result.diff_prob|abs }} p.p.</strong>
+  </p>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-6">
+    <div class="card fiap-card h-100 border-fase1">
+      <div class="card-header fiap-card-header">
+        <span class="fase1-badge-sm">Referência</span> Modelo baseline
+      </div>
+      <div class="card-body text-center py-4">
+        <div class="fiap-diag-badge fiap-diag-{{ 'maligno' if result.fase1.diagnostico == 'MALIGNO' else 'benigno' }} mb-3">
+          {{ result.fase1.diagnostico }}
+        </div>
+        <div class="fiap-prob-value">{{ result.fase1.probabilidade }}%</div>
+        <p class="text-muted">{{ result.fase1.nome_modelo }}</p>
+        <span class="fiap-nivel-badge fiap-nivel-{{ result.fase1.nivel_class }}">
+          {{ result.fase1.nivel_icon }} {{ result.fase1.nivel }}
+        </span>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card fiap-card h-100 border-fase2">
+      <div class="card-header fase2-card-header">
+        <span class="fase2-badge-sm">Otimizado</span> Modelo recomendado
+      </div>
+      <div class="card-body text-center py-4">
+        <div class="fiap-diag-badge fiap-diag-{{ 'maligno' if result.fase2.diagnostico == 'MALIGNO' else 'benigno' }} mb-3">
+          {{ result.fase2.diagnostico }}
+        </div>
+        <div class="fiap-prob-value fase2-accent">{{ result.fase2.probabilidade }}%</div>
+        <p class="text-muted">{{ result.fase2.nome_modelo }}</p>
+        <span class="fiap-nivel-badge fiap-nivel-{{ result.fase2.nivel_class }}">
+          {{ result.fase2.nivel_icon }} {{ result.fase2.nivel }}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="text-center text-muted small mb-2">
+  Abra o laudo completo de cada modelo com os mesmos dados deste caso.
+  O laudo otimizado inclui o assistente clínico para apoio à leitura.
+</p>
+<div class="text-center mb-4 d-flex flex-wrap gap-2 justify-content-center">
+  <a href="/comparar" class="btn btn-outline-secondary">↻ Nova comparação</a>
+
+  <form method="POST" action="/fase1/predict" class="d-inline">
+    {% for f, v in dados.items() %}<input type="hidden" name="{{ f }}" value="{{ v }}">{% endfor %}
+    <input type="hidden" name="paciente_nome" value="{{ patient.nome }}">
+    <input type="hidden" name="paciente_data" value="{{ patient.data }}">
+    <input type="hidden" name="paciente_prontuario" value="{{ patient.prontuario }}">
+    <button type="submit" class="btn btn-outline-danger">
+      Ver laudo de referência →
+    </button>
+  </form>
+
+  <form method="POST" action="/fase2/predict" class="d-inline">
+    {% for f, v in dados.items() %}<input type="hidden" name="{{ f }}" value="{{ v }}">{% endfor %}
+    <input type="hidden" name="paciente_nome" value="{{ patient.nome }}">
+    <input type="hidden" name="paciente_data" value="{{ patient.data }}">
+    <input type="hidden" name="paciente_prontuario" value="{{ patient.prontuario }}">
+    <button type="submit" class="btn fase2-btn-primary">
+      Ver laudo otimizado + assistente →
+    </button>
+  </form>
+</div>
+{% endblock %}

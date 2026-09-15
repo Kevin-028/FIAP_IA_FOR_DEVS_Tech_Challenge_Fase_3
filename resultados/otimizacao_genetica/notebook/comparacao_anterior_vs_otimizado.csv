@@ -1,0 +1,2 @@
+Modelo,Recall Anterior,Recall Otimizado,F1 Anterior,F1 Otimizado,AUC Anterior,AUC Otimizado,Melhorou?
+Regressao Logistica,0.9524,0.9524,0.9756,0.9756,0.998,0.998,Nao

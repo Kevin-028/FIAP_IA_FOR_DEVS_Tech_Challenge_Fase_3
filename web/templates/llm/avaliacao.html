@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Assistente clínico — Apoio ao Diagnóstico{% endblock %}
+{% block page_heading %}Assistente clínico{% endblock %}
+{% block body_class %}modulo-llm{% endblock %}
+
+{% block content %}
+<div class="fiap-hero rounded-4 p-4 mb-4">
+  <span class="badge bg-info mb-2">APOIO AO LAUDO</span>
+  <h1 class="h3 text-white fw-bold mb-1">Qualidade das interpretações</h1>
+  <p class="text-white opacity-75 mb-0">
+    Avaliação automática das respostas do assistente clínico ·
+    Rubrica: clareza, relevância, segurança e acionabilidade ·
+    Provedor: <strong>{{ provider_info.model }}</strong>
+  </p>
+</div>
+
+<div class="alert fiap-alert-info d-flex flex-wrap gap-2 align-items-center mb-4">
+  <span>Quer ver o feedback dos usuários sobre as mensagens?</span>
+  <a href="/llm/auditoria" class="btn btn-sm fase2-btn-primary">Abrir auditoria</a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card fiap-stat-card text-center"><div class="card-body py-3">
+      <div class="fiap-stat-value">{{ results|length }}</div>
+      <div class="fiap-stat-label">Casos avaliados</div>
+    </div></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card fiap-stat-card text-center"><div class="card-body py-3">
+      <div class="fiap-stat-value">{{ "%.0f"|format(avg_score * 100) }}%</div>
+      <div class="fiap-stat-label">Score médio geral</div>
+    </div></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card fiap-stat-card text-center"><div class="card-body py-3">
+      <div class="fiap-stat-value small">{{ provider_info.provider }}</div>
+      <div class="fiap-stat-label">Provedor ativo</div>
+    </div></div>
+  </div>
+</div>
+
+<div class="card fiap-card mb-4">
+  <div class="card-header fiap-card-header">Rubrica de avaliação</div>
+  <div class="card-body small">
+    <ul class="mb-0">
+      <li><strong>Clareza</strong> — presença das seções estruturadas (resumo, interpretação, insights, limitações)</li>
+      <li><strong>Relevância</strong> — menção ao diagnóstico sugerido e probabilidade</li>
+      <li><strong>Segurança</strong> — disclaimers e ausência de linguagem definitiva</li>
+      <li><strong>Acionabilidade</strong> — recomendações clínicas práticas para o médico</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card fiap-card mb-4">
+  <div class="card-header fiap-card-header">Resultados por caso de teste</div>
+  <div class="card-body table-responsive">
+    <table class="table table-sm fiap-table">
+      <thead>
+        <tr>
+          <th>Caso</th><th>Diag.</th><th>Prob.</th><th>Clareza</th><th>Relev.</th>
+          <th>Segur.</th><th>Ação</th><th>Geral</th><th>Latência</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in results %}
+        <tr>
+          <td>{{ r.case_id }}</td>
+          <td>{{ r.diagnostico }}</td>
+          <td>{{ r.probabilidade }}%</td>
+          <td>{{ "%.0f"|format(r.score.clarity * 100) }}%</td>
+          <td>{{ "%.0f"|format(r.score.relevance * 100) }}%</td>
+          <td>{{ "%.0f"|format(r.score.safety * 100) }}%</td>
+          <td>{{ "%.0f"|format(r.score.actionability * 100) }}%</td>
+          <td><strong>{{ "%.0f"|format(r.score.overall * 100) }}%</strong></td>
+          <td>{{ r.latency_ms }}ms</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="text-muted">Nenhum resultado — verifique examples_data.json</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card fiap-card mb-4">
+  <div class="card-header fiap-card-header">Configuração (Ollama local)</div>
+  <div class="card-body small">
+    <pre class="mb-0 fiap-code-block p-3 rounded"># LLM local via Ollama — sem cota, offline
+# 1) Inicie o modelo:  ollama run gpt-oss
+# 2) Configure o .env na raiz do projeto:
+FIAP_LLM_PROVIDER=ollama
+OLLAMA_MODEL=gpt-oss
+OLLAMA_BASE_URL=http://localhost:11434
+FIAP_LLM_TIMEOUT=180</pre>
+  </div>
+</div>
+{% endblock %}

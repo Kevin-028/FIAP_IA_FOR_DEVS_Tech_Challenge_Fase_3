@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% block title %}Entrada por gestos — Apoio ao Diagnóstico{% endblock %}
+{% block page_heading %}Entrada por gestos{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-xl-11">
+
+    <!-- Header -->
+    <div class="fiap-section-header mb-4">
+      <h1 class="fiap-page-title">Entrada assistida por gestos</h1>
+      <p class="fiap-page-subtitle">
+        Use a câmera para reconhecer números de <strong>1 a 5</strong> (duas mãos somam até 10)
+        e acelerar o preenchimento de medidas no exame.
+      </p>
+    </div>
+
+    {% if not status.model_loaded %}
+    <div class="alert alert-warning d-flex align-items-center gap-2 mb-4">
+      <span style="font-size:1.4rem">⚠️</span>
+      <div>
+        <strong>Modelo não treinado.</strong>
+        Colete dados e treine antes de usar esta página.
+        <div class="mt-2">
+          <a href="/visao/coletar" class="btn btn-sm fiap-btn-primary me-2">📸 Coletar Dados</a>
+          <a href="/visao/treinar" class="btn btn-sm btn-outline-secondary">🏋️ Treinar Modelo</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Linha principal: Câmera + Resultado ───────────────────────────── -->
+    <div class="row g-4 align-items-start">
+
+      <!-- Câmera -->
+      <div class="col-12 col-md-7">
+        <div class="fiap-card">
+          <div class="fiap-card-header">📷 Câmera ao Vivo</div>
+          <div class="fiap-card-body">
+            <div class="visao-cam-wrapper">
+              <video id="inputVideo"   class="visao-video" autoplay playsinline style="display:none"></video>
+              <canvas id="outputCanvas" class="visao-canvas"               style="display:none"></canvas>
+              <div id="camPlaceholder" class="visao-placeholder">
+                <span style="font-size:3rem">📷</span>
+                <p class="mt-2 mb-0 text-muted">Câmera desligada</p>
+              </div>
+            </div>
+            <div class="mt-3 d-flex justify-content-center gap-2">
+              <button id="btnStart" class="btn fiap-btn-primary"
+                      {% if not status.model_loaded %}disabled{% endif %}>
+                ▶ Iniciar Câmera
+              </button>
+              <button id="btnStop" class="btn btn-outline-secondary d-none">
+                ⏹ Parar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resultado + métricas -->
+      <div class="col-12 col-md-5 d-flex flex-column gap-3">
+
+        <!-- Número detectado -->
+        <div class="fiap-card">
+          <div class="fiap-card-header">🔢 Número Detectado</div>
+          <div class="fiap-card-body d-flex flex-column align-items-center justify-content-center text-center"
+               style="min-height:240px">
+            <div id="digitDisplay" class="visao-digit-big text-muted">—</div>
+            <div id="digitLabel"   class="visao-digit-label text-muted mt-1">Aguardando câmera...</div>
+
+            <!-- Confiança -->
+            <div class="w-100 mt-3" id="confSection" style="display:none!important">
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Confiança</span>
+                <span id="confValue" class="fw-bold">—</span>
+              </div>
+              <div class="progress" style="height:10px;border-radius:6px">
+                <div id="confBar" class="progress-bar" role="progressbar"
+                     style="width:0%;background:var(--fiap-red);border-radius:6px;transition:width .3s"></div>
+              </div>
+            </div>
+
+            <!-- Histórico -->
+            <div class="mt-3 w-100" id="histSection" style="display:none!important">
+              <p class="small text-muted mb-1">Últimas predições</p>
+              <div id="histPills" class="d-flex flex-wrap gap-1 justify-content-center"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Métricas (só aparece se modelo treinado) -->
+        {% if status.model_loaded and status.metricas %}
+        <div class="fiap-card">
+          <div class="fiap-card-header">📊 Métricas do Modelo</div>
+          <div class="fiap-card-body">
+            <div class="row text-center g-2">
+              <div class="col-6">
+                <div class="small text-muted">Acurácia (CV)</div>
+                <div class="fw-bold fs-5" style="color:var(--fiap-red)">
+                  {{ "%.1f%%"|format(status.metricas.cv_accuracy_mean * 100) }}
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="small text-muted">Total de Amostras</div>
+                <div class="fw-bold fs-5">{{ status.total_samples }}</div>
+              </div>
+              <div class="col-12 mt-1">
+                <div class="small text-muted">Classes: {{ status.classes | join(', ') }}</div>
+              </div>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+              <a href="/visao/coletar" class="btn btn-sm btn-outline-secondary flex-fill">📸 Coletar</a>
+              <a href="/visao/treinar" class="btn btn-sm btn-outline-secondary flex-fill">🏋️ Retreinar</a>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+    </div><!-- /row -->
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='mediapipe/camera_utils.js') }}"></script>
+<script src="{{ url_for('static', filename='mediapipe/drawing_utils.js') }}"></script>
+<script src="{{ url_for('static', filename='mediapipe/hands.js') }}"></script>
+
+<script>
+const modelLoaded = {{ 'true' if status.model_loaded else 'false' }};
+
+const video        = document.getElementById('inputVideo');
+const canvas       = document.getElementById('outputCanvas');
+const placeholder  = document.getElementById('camPlaceholder');
+const ctx          = canvas.getContext('2d');
+const digitDisplay = document.getElementById('digitDisplay');
+const digitLabel   = document.getElementById('digitLabel');
+const confSection  = document.getElementById('confSection');
+const confBar      = document.getElementById('confBar');
+const confValue    = document.getElementById('confValue');
+const histSection  = document.getElementById('histSection');
+const histPills    = document.getElementById('histPills');
+
+let camera = null;
+let predHistory = [];
+const HISTORY_MAX = 15;
+const SMOOTH_N = 7;
+
+// ── Landmark normalisation (mirrors Python logic) ─────────────────────────
+function extractLandmarks(landmarks) {
+  const ox = landmarks[0].x, oy = landmarks[0].y, oz = landmarks[0].z;
+  const flat = [];
+  for (const lm of landmarks) {
+    flat.push(lm.x - ox, lm.y - oy, lm.z - oz);
+  }
+  return flat;
+}
+
+function mode(arr) {
+  const freq = {};
+  let best = arr[0], bestF = 0;
+  for (const v of arr) {
+    freq[v] = (freq[v] || 0) + 1;
+    if (freq[v] > bestF) { bestF = freq[v]; best = v; }
+  }
+  return best;
+}
+
+// ── MediaPipe callback ────────────────────────────────────────────────────
+const hands = new Hands({
+  locateFile: f => `/static/mediapipe/${f}`
+});
+hands.setOptions({
+  maxNumHands: 2,
+  modelComplexity: 0,
+  minDetectionConfidence: 0.7,
+  minTrackingConfidence: 0.5
+});
+
+let lastSend = 0;
+let predBuffers = [[], []];   // histórico por mão (até 2)
+
+hands.onResults(results => {
+  canvas.width  = video.videoWidth  || 640;
+  canvas.height = video.videoHeight || 480;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const handsDetected = (results.multiHandLandmarks || []).length;
+
+  if (handsDetected === 0) {
+    digitDisplay.textContent = '—';
+    digitDisplay.style.color = 'var(--bs-secondary)';
+    digitLabel.textContent = 'Nenhuma mão detectada';
+    confSection.style.setProperty('display', 'none', 'important');
+    return;
+  }
+
+  // Desenha todas as mãos e prediz cada uma
+  const now = Date.now();
+  const shouldSend = modelLoaded && (now - lastSend > 150);
+  if (shouldSend) lastSend = now;
+
+  const promises = results.multiHandLandmarks.map((hl, i) => {
+    const color = i === 0 ? '#EF3340' : '#0d6efd';
+    drawConnectors(ctx, hl, HAND_CONNECTIONS, { color, lineWidth: 2 });
+    drawLandmarks(ctx, hl, { color: '#ffffff', lineWidth: 1, radius: 4 });
+
+    if (!shouldSend) return Promise.resolve(null);
+
+    const landmarks = extractLandmarks(hl);
+    return fetch('/visao/api/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ landmarks })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.digit === undefined) return null;
+      const buf = predBuffers[i] || [];
+      buf.push(data.digit);
+      if (buf.length > SMOOTH_N) buf.shift();
+      predBuffers[i] = buf;
+      return { digit: mode(buf), confidence: data.confidence, idx: i };
+    });
+  });
+
+  if (!shouldSend) return;
+
+  Promise.all(promises).then(results => {
+    const valid = results.filter(r => r !== null);
+    if (valid.length === 0) return;
+    showResult(valid);
+  });
+});
+
+function showResult(handResults) {
+  confSection.style.removeProperty('display');
+  histSection.style.removeProperty('display');
+
+  if (handResults.length === 1) {
+    const { digit, confidence } = handResults[0];
+    digitDisplay.textContent = digit;
+    digitDisplay.style.color = 'var(--fiap-red)';
+    digitLabel.textContent = '1 mão detectada';
+    const pct = Math.round(confidence * 100);
+    confBar.style.width = pct + '%';
+    confValue.textContent = pct + '%';
+    confBar.style.background = pct >= 80 ? 'var(--fiap-red)' : pct >= 50 ? '#ffc107' : '#6c757d';
+  } else {
+    // 2 mãos — mostra os dois números separados + soma
+    const d1 = handResults[0].digit;
+    const d2 = handResults[1].digit;
+    const sum = d1 + d2;
+    digitDisplay.innerHTML = `<span style="color:#EF3340">${d1}</span> <span class="text-muted">+</span> <span style="color:#0d6efd">${d2}</span> <span class="text-muted" style="font-size:0.5em">= ${sum}</span>`;
+    digitLabel.textContent = '2 mãos detectadas (soma = ' + sum + ')';
+    const avgConf = (handResults[0].confidence + handResults[1].confidence) / 2;
+    const pct = Math.round(avgConf * 100);
+    confBar.style.width = pct + '%';
+    confValue.textContent = pct + '% (média)';
+    confBar.style.background = pct >= 80 ? 'var(--fiap-red)' : pct >= 50 ? '#ffc107' : '#6c757d';
+  }
+
+  // Histórico baseado na primeira mão
+  const buf = predBuffers[0] || [];
+  histPills.innerHTML = '';
+  [...buf].reverse().slice(0, HISTORY_MAX).forEach((d, i) => {
+    const pill = document.createElement('span');
+    pill.className = 'badge ' + (i === 0 ? 'bg-danger' : 'bg-secondary');
+    pill.textContent = d;
+    histPills.appendChild(pill);
+  });
+}
+
+// ── Câmera ────────────────────────────────────────────────────────────────
+document.getElementById('btnStart').addEventListener('click', () => {
+  placeholder.style.display = 'none';
+  video.style.display = 'block';
+  canvas.style.display = 'block';
+
+  camera = new Camera(video, {
+    onFrame: async () => { await hands.send({ image: video }); },
+    width: 640, height: 480
+  });
+  camera.start();
+
+  document.getElementById('btnStart').classList.add('d-none');
+  document.getElementById('btnStop').classList.remove('d-none');
+  digitLabel.textContent = 'Mostre a mão para a câmera...';
+});
+
+document.getElementById('btnStop').addEventListener('click', () => {
+  if (camera) { camera.stop(); camera = null; }
+  placeholder.style.display = '';
+  video.style.display = 'none';
+  canvas.style.display = 'none';
+  document.getElementById('btnStart').classList.remove('d-none');
+  document.getElementById('btnStop').classList.add('d-none');
+  digitDisplay.textContent = '—';
+  digitDisplay.style.color = '';
+  digitLabel.textContent = 'Aguardando câmera...';
+  confSection.style.setProperty('display', 'none', 'important');
+  histSection.style.setProperty('display', 'none', 'important');
+  predHistory = [];
+});
+</script>
+{% endblock %}

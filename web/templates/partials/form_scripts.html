@@ -1,0 +1,40 @@
+<script>
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+    new bootstrap.Tooltip(el, { trigger: 'hover focus' });
+  });
+
+  const BENIGN = {
+    smoothness_mean: 0.090, compactness_mean: 0.060, symmetry_mean: 0.170,
+    fractal_dimension_mean: 0.060, radius_se: 0.250, texture_se: 1.000,
+    smoothness_se: 0.006, compactness_se: 0.015, concavity_se: 0.010,
+    concave_points_se: 0.005, symmetry_se: 0.018, fractal_dimension_se: 0.003,
+    texture_worst: 20.0, perimeter_worst: 80.0, smoothness_worst: 0.115,
+    compactness_worst: 0.130, concavity_worst: 0.060, concave_points_worst: 0.040,
+    symmetry_worst: 0.250, fractal_dimension_worst: 0.072
+  };
+  const MALIGN = {
+    smoothness_mean: 0.130, compactness_mean: 0.240, symmetry_mean: 0.270,
+    fractal_dimension_mean: 0.086, radius_se: 1.200, texture_se: 3.500,
+    smoothness_se: 0.018, compactness_se: 0.080, concavity_se: 0.100,
+    concave_points_se: 0.035, symmetry_se: 0.055, fractal_dimension_se: 0.015,
+    texture_worst: 36.0, perimeter_worst: 185.0, smoothness_worst: 0.180,
+    compactness_worst: 0.700, concavity_worst: 0.900, concave_points_worst: 0.220,
+    symmetry_worst: 0.480, fractal_dimension_worst: 0.130
+  };
+
+  function fillForm(data) {
+    Object.entries(data).forEach(([k, v]) => {
+      const el = document.getElementById(k);
+      if (el) el.value = v;
+    });
+  }
+
+  const btnBenign = document.getElementById("btn-sample-benign");
+  const btnMalign = document.getElementById("btn-sample-malign");
+  const btnClear = document.getElementById("btn-clear");
+  if (btnBenign) btnBenign.addEventListener("click", () => fillForm(BENIGN));
+  if (btnMalign) btnMalign.addEventListener("click", () => fillForm(MALIGN));
+  if (btnClear) btnClear.addEventListener("click", () => {
+    document.querySelectorAll("#prediction-form input[type='number']").forEach(el => el.value = "");
+  });
+</script>

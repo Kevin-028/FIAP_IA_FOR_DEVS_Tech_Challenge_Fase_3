@@ -1,0 +1,8 @@
+# Dependencias opcionais para aceleracao GPU (Fase 2)
+# Instalar com: python -m pip install -r requirements-gpu.txt
+
+xgboost>=2.0
+torch
+
+# RTX 5070 (Blackwell, sm_120) precisa de CUDA 12.8+. Nesta máquina use CUDA 13:
+# python -m pip install --force-reinstall "torch==2.14.0+cu130" --index-url https://download.pytorch.org/whl/cu130
