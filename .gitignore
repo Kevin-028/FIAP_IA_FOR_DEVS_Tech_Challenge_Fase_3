@@ -56,3 +56,6 @@ nb_cells.txt
 Analise/*_executed.ipynb
 **/__pycache__/
 
+# Modelo local; o arquivo excede o limite de tamanho do GitHub
+models/adapter/adapter_model.safetensors
+
